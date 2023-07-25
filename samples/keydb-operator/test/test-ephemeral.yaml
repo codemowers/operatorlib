@@ -1,0 +1,16 @@
+---
+apiVersion: codemowers.cloud/v1beta1
+kind: KeydbClaim
+metadata:
+  name: ephemeral1-test
+spec:
+  capacity: 512Mi
+  class: ephemeral
+---
+apiVersion: codemowers.cloud/v1beta1
+kind: KeydbClaim
+metadata:
+  name: ephemeral2-test
+spec:
+  capacity: 512Mi
+  class: ephemeral

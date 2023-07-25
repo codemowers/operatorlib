@@ -1,0 +1,52 @@
+---
+apiVersion: codemowers.cloud/v1beta1
+kind: RedisClaim
+metadata:
+  name: ephemeral-test
+spec:
+  capacity: 512Mi
+  class: ephemeral
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: test-redis-ephemeral
+spec:
+  activeDeadlineSeconds: 180
+  backoffLimit: 30
+  template:
+    spec:
+      terminationGracePeriodSeconds: 0
+      containers:
+        - command:
+            - bash
+            - -e
+            - -c
+            - echo "flushall sync" > foo;
+              for j in $(seq 1 1000); do
+                echo "set key$j '$(dd if=/dev/urandom bs=1024 count=64 status=none | base64 --wrap=0)'" >> foo;
+              done;
+              cat foo | redis-cli -u $REDIS_MASTER_URI --pipe
+          image: redis
+          name: mc
+          env:
+            - name: REDIS_MASTER_URI
+              valueFrom:
+                secretKeyRef:
+                  name: redis-ephemeral-test-owner-secrets
+                  key: REDIS_MASTER_URI
+            - name: REDISCLI_AUTH
+              valueFrom:
+                secretKeyRef:
+                  name: redis-ephemeral-test-owner-secrets
+                  key: REDIS_PASSWORD
+          volumeMounts:
+            - mountPath: /tmp
+              name: tmp
+          workingDir: /tmp
+      restartPolicy: OnFailure
+      volumes:
+        - emptyDir:
+            medium: Memory
+            sizeLimit: 512Mi
+          name: tmp

@@ -1,0 +1,10 @@
+---
+apiVersion: codemowers.cloud/v1beta1
+kind: MysqlDatabaseClass
+metadata:
+  name: external
+  annotations:
+    kubernetes.io/description: "External MySQL cluster"
+spec:
+  reclaimPolicy: Retain
+  shared: true

@@ -1,0 +1,10 @@
+*.diff
+*.save
+__pycache__
+test.yaml
+manifests/
+update-clusters.sh
+update-classes.sh
+nuke-all.sh
+deps.py
+argocd-applications.yaml

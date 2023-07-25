@@ -1,0 +1,9 @@
+---
+apiVersion: codemowers.cloud/v1beta1
+kind: RedisClaim
+metadata:
+  name: redis-copy-test
+spec:
+  capacity: 8Gi
+  class: persistent
+  upstreamSecretRef: foobar

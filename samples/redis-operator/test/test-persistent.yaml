@@ -1,0 +1,8 @@
+---
+apiVersion: codemowers.cloud/v1beta1
+kind: RedisClaim
+metadata:
+  name: redis-persistent-test
+spec:
+  capacity: 512Mi
+  class: persistent

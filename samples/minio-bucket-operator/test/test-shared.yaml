@@ -1,0 +1,24 @@
+---
+apiVersion: codemowers.cloud/v1beta1
+kind: MinioBucketClaim
+metadata:
+  name: shared1-test
+spec:
+  capacity: 2Gi
+  class: shared
+---
+apiVersion: codemowers.cloud/v1beta1
+kind: MinioBucketClaim
+metadata:
+  name: shared2-test
+spec:
+  capacity: 2Gi
+  class: shared
+---
+apiVersion: codemowers.cloud/v1beta1
+kind: MinioBucketClaim
+metadata:
+  name: shared3-test
+spec:
+  capacity: 2Gi
+  class: shared

@@ -1,0 +1,27 @@
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mysql-database-operator
+  namespace: mysql-clusters
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mysql-database-operator
+  serviceName: mysql-database-operator
+  template:
+    metadata:
+      labels:
+        app: mysql-database-operator
+    spec:
+      containers:
+        - image: codemowers/mysql-database-operator
+          name: mysql-database-operator
+          ports:
+            - containerPort: 8000
+              name: metrics
+      enableServiceLinks: false
+      imagePullSecrets:
+        - name: regcred
+      serviceAccountName: codemowers-cloud-mysql-database-operator

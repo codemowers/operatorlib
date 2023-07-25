@@ -1,0 +1,16 @@
+---
+apiVersion: codemowers.cloud/v1beta1
+kind: KeydbClaim
+metadata:
+  name: persistent1-test
+spec:
+  capacity: 512Mi
+  class: persistent
+---
+apiVersion: codemowers.cloud/v1beta1
+kind: KeydbClaim
+metadata:
+  name: persistent2-test
+spec:
+  capacity: 512Mi
+  class: persistent

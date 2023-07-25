@@ -1,0 +1,16 @@
+---
+apiVersion: codemowers.cloud/v1beta1
+kind: PostgresDatabaseClass
+metadata:
+  name: dedicated
+  annotations:
+    kubernetes.io/description: "Dedicated Postgres cluster"
+spec:
+  reclaimPolicy: Retain
+  replicas: 3
+  storageClass: postgres
+  podSpec:
+    containers:
+      - name: postgres
+        image: postgres:13.11@sha256:0f18de936266e03891e186db616e530e0e4365ef5fb300d4bb27318538b80604
+        imagePullPolicy: IfNotPresent

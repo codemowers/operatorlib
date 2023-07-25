@@ -1,0 +1,27 @@
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: minio-bucket-operator
+  namespace: minio-clusters
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: minio-bucket-operator
+  serviceName: minio-bucket-operator
+  template:
+    metadata:
+      labels:
+        app: minio-bucket-operator
+    spec:
+      containers:
+        - image: codemowers/minio-bucket-operator
+          name: minio-bucket-operator
+          ports:
+            - containerPort: 8000
+              name: metrics
+      enableServiceLinks: false
+      imagePullSecrets:
+        - name: regcred
+      serviceAccountName: codemowers-cloud-minio-bucket-operator

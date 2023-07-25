@@ -1,0 +1,15 @@
+---
+apiVersion: codemowers.cloud/v1beta1
+kind: RedisClass
+metadata:
+  name: cache
+  annotations:
+    kubernetes.io/description: "Caching Redis instance"
+spec:
+  reclaimPolicy: Delete
+  replicas: 1
+  podSpec:
+    containers:
+      - name: redis
+        image: redis:7.0.11@sha256:1008c73f08e9f913868e2fa2e843212b62ea5bf3c66435d87bc7a6207bc0f1b4
+        imagePullPolicy: IfNotPresent

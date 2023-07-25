@@ -1,0 +1,6 @@
+apiVersion: v2
+name: mysql-database-operator
+description: Helm chart for mysql-database-operator
+type: application
+version: 0.1.0
+appVersion: 0.0.1

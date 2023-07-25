@@ -1,0 +1,75 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: codemowers-cloud-mysql-database-operator
+rules:
+  - apiGroups:
+      - ''
+    resources:
+      - persistentvolumeclaims
+    verbs:
+      - create
+      - patch
+  - apiGroups:
+      - ''
+    resources:
+      - secrets
+    verbs:
+      - create
+      - get
+      - update
+  - apiGroups:
+      - codemowers.cloud
+    resources:
+      - mysqldatabaseclaims
+      - mysqldatabaseclasses
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - codemowers.cloud
+    resources:
+      - mysqldatabaseclaims/status
+      - mysqldatabases/status
+    verbs:
+      - patch
+      - update
+  - apiGroups:
+      - codemowers.cloud
+    resources:
+      - mysqldatabases
+    verbs:
+      - create
+      - get
+      - list
+      - patch
+      - watch
+  - apiGroups:
+      - mariadb.mmontes.io
+    resources:
+      - mariadbs
+    verbs:
+      - create
+      - delete
+      - patch
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: codemowers-cloud-mysql-database-operator
+  namespace: mysql-clusters
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: codemowers-cloud-mysql-database-operator
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: codemowers-cloud-mysql-database-operator
+subjects:
+  - kind: ServiceAccount
+    name: codemowers-cloud-mysql-database-operator
+    namespace: mysql-clusters

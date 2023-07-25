@@ -1,0 +1,55 @@
+---
+apiVersion: codemowers.cloud/v1beta1
+kind: MysqlDatabaseClaim
+metadata:
+  name: dedicated1-test
+spec:
+  capacity: 1Gi
+  class: dedicated
+---
+apiVersion: codemowers.cloud/v1beta1
+kind: MysqlDatabaseClaim
+metadata:
+  name: dedicated2-test
+spec:
+  capacity: 1Gi
+  class: dedicated
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: test-mysqldatabase-dedicated1
+spec:
+  activeDeadlineSeconds: 180
+  backoffLimit: 30
+  template:
+    spec:
+      terminationGracePeriodSeconds: 0
+      containers:
+        - command:
+            - bash
+            - -e
+            - -c
+            - echo "Generating 1k records...";
+              echo "create table if not exists foo (id int auto_increment primary key, bar varchar(255));" > foo.sql;
+              echo "insert into foo(bar) values" >> foo.sql;
+              for j in $(seq 1 1000); do
+              echo "('$(dd if=/dev/urandom bs=189 count=1 status=none | base64 --wrap=0)')," >> foo.sql;
+              done;
+              echo "('');" >> foo.sql;
+              mysql -u $MYSQL_USER $MYSQL_DATABASE -v < foo.sql;
+          image: mariadb:10.9.7@sha256:198c7a5fea3d7285762042a628fe8f83f0a7ccef559605b4cc9502e65210880b
+          name: mysql
+          envFrom:
+            - secretRef:
+                name: mysqldatabase-dedicated1-test-owner-secrets
+          volumeMounts:
+            - mountPath: /tmp
+              name: tmp
+          workingDir: /tmp
+      restartPolicy: OnFailure
+      volumes:
+        - emptyDir:
+            medium: Memory
+            sizeLimit: 512Mi
+          name: tmp

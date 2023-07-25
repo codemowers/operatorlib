@@ -1,0 +1,6 @@
+apiVersion: v2
+name: minio-bucket-operator
+description: Helm chart for minio-bucket-operator
+type: application
+version: 0.1.0
+appVersion: 0.0.1

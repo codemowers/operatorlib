@@ -1,0 +1,15 @@
+---
+apiVersion: codemowers.cloud/v1beta1
+kind: KeydbClass
+metadata:
+  name: ephemeral
+  annotations:
+    kubernetes.io/description: "Ephemeral KeyDB cluster"
+spec:
+  reclaimPolicy: Delete
+  replicas: 3
+  podSpec:
+    containers:
+      - name: redis
+        image: eqalpha/keydb@sha256:c6c09ea6f80b073e224817e9b4a554db7f33362e8321c4084701884be72eed67
+        imagePullPolicy: IfNotPresent

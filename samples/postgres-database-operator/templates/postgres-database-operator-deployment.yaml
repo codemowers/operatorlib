@@ -1,0 +1,27 @@
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres-database-operator
+  namespace: postgres-clusters
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres-database-operator
+  serviceName: postgres-database-operator
+  template:
+    metadata:
+      labels:
+        app: postgres-database-operator
+    spec:
+      containers:
+        - image: codemowers/postgres-database-operator
+          name: postgres-database-operator
+          ports:
+            - containerPort: 8000
+              name: metrics
+      enableServiceLinks: false
+      imagePullSecrets:
+        - name: regcred
+      serviceAccountName: codemowers-cloud-postgres-database-operator

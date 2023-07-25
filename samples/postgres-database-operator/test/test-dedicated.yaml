@@ -1,0 +1,57 @@
+---
+apiVersion: codemowers.cloud/v1beta1
+kind: PostgresDatabaseClaim
+metadata:
+  name: dedicated1-test
+spec:
+  capacity: 1Gi
+  class: dedicated
+---
+apiVersion: codemowers.cloud/v1beta1
+kind: PostgresDatabaseClaim
+metadata:
+  name: dedicated2-test
+spec:
+  capacity: 1Gi
+  class: dedicated
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: test-postgresdatabase-dedicated1
+spec:
+  activeDeadlineSeconds: 180
+  backoffLimit: 30
+  template:
+    spec:
+      terminationGracePeriodSeconds: 0
+      containers:
+        - command:
+            - bash
+            - -e
+            - -c
+            - echo "Generating 1k records...";
+              echo "drop table foo;" > foo.sql;
+              echo "create table foo (id serial primary key, bar varchar(255));" >> foo.sql;
+              echo "insert into foo(bar) values" >> foo.sql;
+              for j in $(seq 1 10000); do
+              echo "('$(dd if=/dev/urandom bs=189 count=1 status=none | base64 --wrap=0)')," >> foo.sql;
+              done;
+              echo "('');" >> foo.sql;
+              head -n10 foo.sql;
+              psql -f foo.sql;
+          image: postgres:13.11@sha256:0f18de936266e03891e186db616e530e0e4365ef5fb300d4bb27318538b80604
+          name: psql
+          envFrom:
+            - secretRef:
+                name: postgresdatabase-dedicated1-test-owner-secrets
+          volumeMounts:
+            - mountPath: /tmp
+              name: tmp
+          workingDir: /tmp
+      restartPolicy: OnFailure
+      volumes:
+        - emptyDir:
+            medium: Memory
+            sizeLimit: 512Mi
+          name: tmp

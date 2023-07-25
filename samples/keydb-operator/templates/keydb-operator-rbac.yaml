@@ -1,0 +1,96 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: codemowers-cloud-keydb-operator
+rules:
+  - apiGroups:
+      - ''
+    resources:
+      - persistentvolumeclaims
+    verbs:
+      - create
+      - patch
+  - apiGroups:
+      - ''
+    resources:
+      - pods
+    verbs:
+      - patch
+  - apiGroups:
+      - ''
+    resources:
+      - secrets
+    verbs:
+      - create
+      - get
+      - update
+  - apiGroups:
+      - ''
+    resources:
+      - services
+    verbs:
+      - create
+      - get
+      - patch
+  - apiGroups:
+      - apps
+    resources:
+      - statefulsets
+    verbs:
+      - create
+      - get
+      - patch
+  - apiGroups:
+      - codemowers.cloud
+    resources:
+      - keydbclaims
+      - keydbclasses
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - codemowers.cloud
+    resources:
+      - keydbclaims/status
+      - keydbs/status
+    verbs:
+      - patch
+      - update
+  - apiGroups:
+      - codemowers.cloud
+    resources:
+      - keydbs
+    verbs:
+      - create
+      - get
+      - list
+      - patch
+      - watch
+  - apiGroups:
+      - policy
+    resources:
+      - poddisruptionbudgets
+    verbs:
+      - create
+      - patch
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: codemowers-cloud-keydb-operator
+  namespace: keydb-clusters
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: codemowers-cloud-keydb-operator
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: codemowers-cloud-keydb-operator
+subjects:
+  - kind: ServiceAccount
+    name: codemowers-cloud-keydb-operator
+    namespace: keydb-clusters

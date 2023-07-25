@@ -1,0 +1,16 @@
+---
+apiVersion: codemowers.cloud/v1beta1
+kind: MysqlDatabaseClaim
+metadata:
+  name: shared1-test
+spec:
+  capacity: 1Gi
+  class: shared
+---
+apiVersion: codemowers.cloud/v1beta1
+kind: MysqlDatabaseClaim
+metadata:
+  name: shared2-test
+spec:
+  capacity: 1Gi
+  class: shared

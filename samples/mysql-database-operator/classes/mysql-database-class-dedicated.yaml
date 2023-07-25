@@ -1,0 +1,17 @@
+---
+apiVersion: codemowers.cloud/v1beta1
+kind: MysqlDatabaseClass
+metadata:
+  name: dedicated
+  annotations:
+    kubernetes.io/description: "Dedicated MySQL cluster"
+spec:
+  reclaimPolicy: Retain
+  replicas: 3
+  routers: 2
+  storageClass: mysql
+  podSpec:
+    containers:
+      - name: mariadb
+        image: mariadb:10.9.7@sha256:198c7a5fea3d7285762042a628fe8f83f0a7ccef559605b4cc9502e65210880b
+        imagePullPolicy: IfNotPresent

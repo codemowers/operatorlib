@@ -1,0 +1,27 @@
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: keydb-operator
+  namespace: keydb-clusters
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: keydb-operator
+  serviceName: keydb-operator
+  template:
+    metadata:
+      labels:
+        app: keydb-operator
+    spec:
+      containers:
+        - image: codemowers/keydb-operator
+          name: keydb-operator
+          ports:
+            - containerPort: 8000
+              name: metrics
+      enableServiceLinks: false
+      imagePullSecrets:
+        - name: regcred
+      serviceAccountName: codemowers-cloud-keydb-operator

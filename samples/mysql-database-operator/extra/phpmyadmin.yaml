@@ -1,0 +1,29 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: phpmyadmin
+  namespace: mysql-clusters
+spec:
+  # phpMyAdmin session handling is not really compatible with more replicas
+  replicas: 1
+  selector:
+    matchLabels:
+      app: phpmyadmin
+  template:
+    metadata:
+      labels:
+        app: phpmyadmin
+    spec:
+      containers:
+        - name: phpmyadmin
+          image: phpmyadmin/phpmyadmin
+          ports:
+            - name: web
+              containerPort: 80
+              protocol: TCP
+          env:
+            - name: PMA_ARBITRARY
+              value: "1"
+            - name: UPLOAD_LIMIT
+              value: 10G

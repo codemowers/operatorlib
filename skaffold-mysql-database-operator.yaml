@@ -1,0 +1,18 @@
+---
+apiVersion: skaffold/v3
+kind: Config
+metadata:
+  name: mysql-database-operator
+build:
+  artifacts:
+    - docker:
+        dockerfile: samples/mysql-database-operator/Dockerfile
+      image: codemowers/mysql-database-operator
+deploy:
+  kubectl:
+    flags:
+      global:
+        - --namespace=mysql-clusters
+manifests:
+  rawYaml:
+    - samples/mysql-database-operator/templates/mysql-database-operator-deployment.yaml

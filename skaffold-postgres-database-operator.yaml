@@ -1,0 +1,18 @@
+---
+apiVersion: skaffold/v3
+kind: Config
+metadata:
+  name: postgres-database-operator
+build:
+  artifacts:
+    - docker:
+        dockerfile: samples/postgres-database-operator/Dockerfile
+      image: codemowers/postgres-database-operator
+deploy:
+  kubectl:
+    flags:
+      global:
+        - --namespace=postgres-clusters
+manifests:
+  rawYaml:
+    - samples/postgres-database-operator/templates/postgres-database-operator-deployment.yaml

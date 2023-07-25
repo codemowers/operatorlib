@@ -1,0 +1,10 @@
+---
+apiVersion: codemowers.cloud/v1beta1
+kind: PostgresDatabaseClass
+metadata:
+  name: external
+  annotations:
+    kubernetes.io/description: "External Postgres cluster"
+spec:
+  reclaimPolicy: Retain
+  shared: true

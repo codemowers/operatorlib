@@ -1,0 +1,108 @@
+---
+apiVersion: skaffold/v3
+kind: Config
+metadata:
+  name: keydb-operator
+build:
+  artifacts:
+    - docker:
+        dockerfile: samples/keydb-operator/Dockerfile
+      image: codemowers/keydb-operator
+deploy:
+  kubectl:
+    flags:
+      global:
+        - --namespace=keydb-clusters
+manifests:
+  rawYaml:
+    - samples/keydb-operator/templates/keydb-operator-deployment.yaml
+---
+apiVersion: skaffold/v3
+kind: Config
+metadata:
+  name: minio-bucket-operator
+build:
+  artifacts:
+    - docker:
+        dockerfile: samples/minio-bucket-operator/Dockerfile
+      image: codemowers/minio-bucket-operator
+deploy:
+  kubectl:
+    flags:
+      global:
+        - --namespace=minio-clusters
+manifests:
+  rawYaml:
+    - samples/minio-bucket-operator/templates/minio-bucket-operator-deployment.yaml
+---
+apiVersion: skaffold/v3
+kind: Config
+metadata:
+  name: mysql-database-operator
+build:
+  artifacts:
+    - docker:
+        dockerfile: samples/mysql-database-operator/Dockerfile
+      image: codemowers/mysql-database-operator
+deploy:
+  kubectl:
+    flags:
+      global:
+        - --namespace=mysql-clusters
+manifests:
+  rawYaml:
+    - samples/mysql-database-operator/templates/mysql-database-operator-deployment.yaml
+---
+apiVersion: skaffold/v3
+kind: Config
+metadata:
+  name: postgres-database-operator
+build:
+  artifacts:
+    - docker:
+        dockerfile: samples/postgres-database-operator/Dockerfile
+      image: codemowers/postgres-database-operator
+deploy:
+  kubectl:
+    flags:
+      global:
+        - --namespace=postgres-clusters
+manifests:
+  rawYaml:
+    - samples/postgres-database-operator/templates/postgres-database-operator-deployment.yaml
+---
+apiVersion: skaffold/v3
+kind: Config
+metadata:
+  name: redis-operator
+build:
+  artifacts:
+    - docker:
+        dockerfile: samples/redis-operator/Dockerfile
+      image: codemowers/redis-operator
+deploy:
+  kubectl:
+    flags:
+      global:
+        - --namespace=redis-clusters
+manifests:
+  rawYaml:
+    - samples/redis-operator/templates/redis-operator-deployment.yaml
+---
+apiVersion: skaffold/v3
+kind: Config
+metadata:
+  name: secret-claim-operator
+build:
+  artifacts:
+    - docker:
+        dockerfile: samples/secret-claim-operator/Dockerfile
+      image: codemowers/secret-claim-operator
+deploy:
+  kubectl:
+    flags:
+      global:
+        - --namespace=secret-claim-operator
+manifests:
+  rawYaml:
+    - samples/secret-claim-operator/templates/secret-claim-operator-deployment.yaml

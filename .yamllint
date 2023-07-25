@@ -1,0 +1,6 @@
+---
+extends: default
+ignore: |
+  manifests/
+rules:
+  line-length: disable

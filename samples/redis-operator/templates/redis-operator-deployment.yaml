@@ -1,0 +1,27 @@
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: redis-operator
+  namespace: redis-clusters
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis-operator
+  serviceName: redis-operator
+  template:
+    metadata:
+      labels:
+        app: redis-operator
+    spec:
+      containers:
+        - image: codemowers/redis-operator
+          name: redis-operator
+          ports:
+            - containerPort: 8000
+              name: metrics
+      enableServiceLinks: false
+      imagePullSecrets:
+        - name: regcred
+      serviceAccountName: codemowers-cloud-redis-operator

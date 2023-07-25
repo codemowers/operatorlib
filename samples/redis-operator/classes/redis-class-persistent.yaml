@@ -1,0 +1,16 @@
+---
+apiVersion: codemowers.cloud/v1beta1
+kind: RedisClass
+metadata:
+  name: persistent
+  annotations:
+    kubernetes.io/description: "Persistent Redis instance"
+spec:
+  reclaimPolicy: Retain
+  replicas: 3
+  storageClass: redis
+  podSpec:
+    containers:
+      - name: redis
+        image: redis:7.0.11@sha256:1008c73f08e9f913868e2fa2e843212b62ea5bf3c66435d87bc7a6207bc0f1b4
+        imagePullPolicy: IfNotPresent

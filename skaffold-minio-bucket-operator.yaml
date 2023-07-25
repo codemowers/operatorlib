@@ -1,0 +1,18 @@
+---
+apiVersion: skaffold/v3
+kind: Config
+metadata:
+  name: minio-bucket-operator
+build:
+  artifacts:
+    - docker:
+        dockerfile: samples/minio-bucket-operator/Dockerfile
+      image: codemowers/minio-bucket-operator
+deploy:
+  kubectl:
+    flags:
+      global:
+        - --namespace=minio-clusters
+manifests:
+  rawYaml:
+    - samples/minio-bucket-operator/templates/minio-bucket-operator-deployment.yaml

@@ -1,0 +1,59 @@
+---
+apiVersion: codemowers.cloud/v1beta1
+kind: MinioBucketClaim
+metadata:
+  name: dedicated1-test
+spec:
+  capacity: 2Gi
+  class: dedicated
+---
+apiVersion: codemowers.cloud/v1beta1
+kind: MinioBucketClaim
+metadata:
+  name: dedicated2-test
+spec:
+  capacity: 2Gi
+  class: dedicated
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: test-miniobucket-dedicated1-test
+spec:
+  activeDeadlineSeconds: 180
+  backoffLimit: 30
+  template:
+    spec:
+      terminationGracePeriodSeconds: 0
+      containers:
+        - command:
+            - bash
+            - -e
+            - -c
+            - echo 'Generating random 1GiB file...';
+              dd if=/dev/urandom of=/tmp/foo bs=32768 count=32768 status=none;
+              mc cp /tmp/foo s3/$BUCKET_NAME/foo;
+              mc ls s3/$BUCKET_NAME
+          image: minio/mc
+          name: mc
+          env:
+            - name: BUCKET_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: miniobucket-dedicated1-test-owner-secrets
+                  key: BUCKET_NAME
+            - name: MC_HOST_s3
+              valueFrom:
+                secretKeyRef:
+                  name: miniobucket-dedicated1-test-owner-secrets
+                  key: MINIO_URI
+          volumeMounts:
+            - mountPath: /tmp
+              name: tmp
+          workingDir: /tmp
+      restartPolicy: OnFailure
+      volumes:
+        - emptyDir:
+            medium: Memory
+            sizeLimit: 1100Mi
+          name: tmp
