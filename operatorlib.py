@@ -450,7 +450,9 @@ class InstanceMixin():
             "path": "%s/lastTransitionTime" % path,
             "value": self.get_json_utcnow(),
         }]
-        print("Patching status", patches)
+        print("  Patching %s %s status:" % (self.SINGULAR, self.name))
+        for patch in patches:
+            print("    ", patch)
 
         try:
             await self.patch_instance_status(patches)
@@ -619,35 +621,42 @@ class InstanceMixin():
             try:
                 cls._counter_instance_reconcile_loop_restart_count += 1
                 async for event in w.stream(co.list_cluster_custom_object, cls.GROUP, cls.VERSION, cls.PLURAL.lower(), **kwargs):
+
+                    if isinstance(event, str):
+                        print("Resource definition of %s not installed" % (
+                            cls.SINGULAR))
+                        await asyncio.sleep(60)
+                        continue
+
                     body = event["object"]
                     kwargs["resource_version"] = body["metadata"]["resourceVersion"]
-                    try:
-                        instance = await cls._construct_resource(args, co, body, api_client)
-                    except ApiException as e:
-                        if e.status == 409:
-                            print("Skipping %s %s reconcile because object has been changed: %s" % (
-                                cls.SINGULAR, body["metadata"]["name"], e))
-                            continue
-                        else:
-                            raise
-                    instance.setup()
                     if event["type"] in ("ADDED", "MODIFIED"):
-                        if "uid" not in instance.spec["claimRef"]:
+                        if "uid" not in body["spec"]["claimRef"]:
                             print("%s %s/%s gone, aborting %s %s reconcile" % (
                                 cls.get_claim_singular(),
-                                instance.spec["claimRef"]["namespace"],
-                                instance.spec["claimRef"]["name"],
+                                body["spec"]["claimRef"]["namespace"],
+                                body["spec"]["claimRef"]["name"],
                                 cls.SINGULAR,
-                                instance.name))
+                                body["metadata"]["name"]))
                             continue
-                        prev_instance = cls.cached_instances.get(body["metadata"]["name"], None)
-                        if prev_instance and prev_instance.generation == instance.generation:
-                            print("No changes for %s %s" % (cls.SINGULAR, instance.name))
-                            continue
-                        print("Reconciling %s %s" % (cls.SINGULAR, instance.name))
-                        cls._counter_instance_reconcile_count += 1
+
                         try:
+                            instance = await cls._construct_resource(args, co, body, api_client)
+                            instance.setup()
+                            prev_instance = cls.cached_instances.get(body["metadata"]["name"], None)
+                            if prev_instance and prev_instance.generation == instance.generation:
+                                print("No spec changes for %s %s" % (cls.SINGULAR, instance.name))
+                                continue
+                            print("Reconciling %s %s" % (cls.SINGULAR, instance.name))
+                            cls._counter_instance_reconcile_count += 1
+
                             await instance.reconcile_instance()
+                        except ReconcileDeferred as e:
+                            print("Deferring %s %s reconcile due to: %s" % (
+                                cls.SINGULAR,
+                                body["metadata"]["name"],
+                                e))
+                            continue
                         except ReconcileError as e:
                             print("Instance reconciliation error:", e)
                             await cls.set_instance_phase(co, body["metadata"], cls.INSTANCE_STATE_ERROR)
@@ -758,6 +767,10 @@ class InstanceMixin():
 
 
 class ReconcileError(Exception):
+    pass
+
+
+class ReconcileDeferred(ReconcileError):
     pass
 
 
@@ -1102,6 +1115,7 @@ class ClaimMixin():
                         "namespace": body["metadata"]["namespace"],
                         "name": body["metadata"]["name"],
                         "resourceVersion": body["metadata"]["resourceVersion"]}})
+            raise ReconcileDeferred("Status initialized")
 
     @classmethod
     def generate_operator_tasks(cls, api_client, co, args):
@@ -1155,6 +1169,13 @@ class ClaimMixin():
                         cls._counter_claim_reconcile_count += 1
                         try:
                             await cls.reconcile_claim(api_client, co, body)
+                        except ReconcileDeferred as e:
+                            print("Deferring %s %s/%s reconcile due to: %s" % (
+                                cls.get_claim_singular(),
+                                body["metadata"]["namespace"],
+                                body["metadata"]["name"],
+                                e))
+                            continue
                         except ReconcileError as e:
                             await cls.set_claim_phase(co, body["metadata"], cls.CLAIM_STATE_ERROR)
                             print("Claim reconciliation failed: %s" % e)
@@ -2506,7 +2527,6 @@ class ClassedOperator(InstanceClaimMixin, InstanceMixin, ClaimMixin, Operator):
                 "phase": cls.INSTANCE_STATE_PENDING,
                 "conditions": cls.generate_instance_conditions(),
             }
-            print("Resetting status for", cls.SINGULAR, body["metadata"]["name"])
             await co.replace_cluster_custom_object_status(
                 cls.GROUP, cls.VERSION,
                 cls.PLURAL.lower(), body["metadata"]["name"], {
@@ -2516,7 +2536,7 @@ class ClassedOperator(InstanceClaimMixin, InstanceMixin, ClaimMixin, Operator):
                     "metadata": {
                         "name": body["metadata"]["name"],
                         "resourceVersion": body["metadata"]["resourceVersion"]}})
-            body["status"] = initial_status
+            raise ReconcileDeferred("Status initialized")
 
         i = cls(body, class_body, **args)
         i.co = co
