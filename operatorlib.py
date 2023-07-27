@@ -1162,6 +1162,11 @@ class ClaimMixin():
             try:
                 cls._counter_claim_reconcile_loop_restart_count += 1
                 async for event in w.stream(co.list_namespaced_custom_object, cls.GROUP, cls.VERSION, "", cls.get_claim_plural().lower(), **kwargs):
+                    if isinstance(event, str):
+                        print("Resource definition of %s not installed" % (
+                            cls.get_claim_singular()))
+                        await asyncio.sleep(60)
+                        continue
                     body = event["object"]
                     kwargs["resource_version"] = body["metadata"]["resourceVersion"]
                     if event["type"] in ("ADDED", "MODIFIED"):
