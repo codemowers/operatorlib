@@ -73,7 +73,7 @@ class MysqlDatabaseOperator(SharedMixin,
         """
         Generate target resource name
         """
-        return "db%s" % self.uid.replace("-", "")
+        return "%s_%s" % (self.spec["claimRef"]["namespace"], self.uid)
 
     async def generate_instance_secret(self):
         pwd = self.generate_random_string(32)

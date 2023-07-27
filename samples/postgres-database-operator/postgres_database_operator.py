@@ -75,7 +75,7 @@ class PostgresDatabaseOperator(ClaimSecretMixin,
         """
         Generate target resource name
         """
-        return "db%s" % self.uid.replace("-", "")
+        return "%s_%s" % (self.spec["claimRef"]["namespace"], self.uid)
 
     def generate_custom_resources(self):
         if not self.class_spec["podSpec"]:
@@ -146,7 +146,7 @@ class PostgresDatabaseOperator(ClaimSecretMixin,
                 await self.set_instance_condition(self.CONDITION_INSTANCE_DATABASE_CREATED)
 
                 try:
-                    await cursor.execute("CREATE USER %s WITH ENCRYPTED PASSWORD %s;" % (
+                    await cursor.execute("CREATE USER \"%s\" WITH ENCRYPTED PASSWORD %s;" % (
                         self.claim_secret["PGUSER"], repr(self.claim_secret["PGPASSWORD"])))
                 except psycopg2.errors.DuplicateObject:
                     pass

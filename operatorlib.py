@@ -1100,6 +1100,9 @@ class ClaimMixin():
 
     @classmethod
     async def reconcile_claim(cls, api_client, co, body):
+        if not re.match(r"[a-z][a-z0-9\-]{0,25}$", body["metadata"]["namespace"]):
+            raise ReconcileError("Invalid or too long claim namespace (max 25 chars)")
+
         # Initialize status subresource of claim
         if "status" not in body:
             await co.replace_namespaced_custom_object_status(

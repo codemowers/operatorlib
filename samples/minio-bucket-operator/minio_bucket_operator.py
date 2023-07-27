@@ -66,7 +66,7 @@ class MinioBucketOperator(SharedMixin,
         # Bucket max length is 63 and UUID is 36 characters
         # TODO: assert no double hyphens
         # https://docs.aws.amazon.com/AmazonS3/latest/userguide/bucketnamingrules.html
-        return "bucket-%s" % self.uid
+        return "%s-%s" % (self.spec["claimRef"]["namespace"], self.uid)
 
     async def generate_instance_secret(self):
         root_user = "root"
@@ -110,7 +110,8 @@ class MinioBucketOperator(SharedMixin,
                 print("Creating bucket %s" % url)
                 r = await requests.put(url, auth=aws)
                 if r.status_code not in (200, 409):
-                    raise ReconcileError("Creating bucket returned status code %d" % r.status_code)
+                    raise ReconcileError("Creating bucket %s returned status code %d" % (
+                        bucket_name, r.status_code))
                 await self.set_instance_condition(self.CONDITION_INSTANCE_BUCKET_CREATED)
 
                 # Set quota
@@ -120,7 +121,8 @@ class MinioBucketOperator(SharedMixin,
                     "quotatype": "hard",
                 })
                 if r.status_code not in (200,):
-                    raise ReconcileError("Setting quota for bucket returned status code %d" % r.status_code)
+                    raise ReconcileError("Setting quota for bucket %s returned status code %d" % (
+                        bucket_name, r.status_code))
                 await self.set_instance_condition(self.CONDITION_INSTANCE_BUCKET_QUOTA_SET)
             except httpx.ConnectError:
                 raise ReconcileError("Failed to connect to Minio at %s" % base_url)
