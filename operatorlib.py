@@ -1776,15 +1776,16 @@ class PodSpecMixin():
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        pod_spec = self.class_spec["podSpec"]
-        if "containers" not in pod_spec:
-            pod_spec["containers"] = []
-        for container_spec in pod_spec["containers"]:
-            if "resources" not in container_spec:
-                container_spec["resources"] = {}
-            for j in ("requests", "limits"):
-                if j not in container_spec["resources"]:
-                    container_spec["resources"][j] = {}
+        pod_spec = self.class_spec.get("podSpec")
+        if pod_spec:
+            if "containers" not in pod_spec:
+                pod_spec["containers"] = []
+            for container_spec in pod_spec["containers"]:
+                if "resources" not in container_spec:
+                    container_spec["resources"] = {}
+                for j in ("requests", "limits"):
+                    if j not in container_spec["resources"]:
+                        container_spec["resources"][j] = {}
 
     @classmethod
     def get_class_printer_columns(cls):
@@ -1952,10 +1953,11 @@ class StatefulSetMixin():
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        pod_spec = self.class_spec["podSpec"]
-        for container_spec in pod_spec["containers"]:
-            if "workingDir" not in container_spec:
-                container_spec["workingDir"] = "/data"
+        pod_spec = self.class_spec.get("podSpec")
+        if pod_spec:
+            for container_spec in pod_spec["containers"]:
+                if "workingDir" not in container_spec:
+                    container_spec["workingDir"] = "/data"
 
     def generate_pod_spec(self):
         raise NotImplementedError("generate_pod_spec method required by StatefulSetMixin not implemented")

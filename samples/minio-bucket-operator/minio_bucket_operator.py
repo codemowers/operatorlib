@@ -68,21 +68,36 @@ class MinioBucketOperator(SharedMixin,
         # https://docs.aws.amazon.com/AmazonS3/latest/userguide/bucketnamingrules.html
         return "%s-%s" % (self.spec["claimRef"]["namespace"], self.uid)
 
+    def get_s3_endpoint_url(self):
+        return self.instance_secret.get(
+            "AWS_S3_ENDPOINT_URL", "http://%s" % self.get_service_fqdn())
+
+    def get_minio_admin_uri(self):
+        return self.instance_secret.get(
+            "MINIO_ADMIN_URI", self.get_s3_endpoint_url().replace("://", "://%s:%s@" % (
+                self.instance_secret["MINIO_ROOT_USER"],
+                self.instance_secret["MINIO_ROOT_PASSWORD"],
+            )))
+
     async def generate_instance_secret(self):
         root_user = "root"
         root_password = self.generate_random_string(128)
         yield "MINIO_ROOT_USER", root_user
         yield "MINIO_ROOT_PASSWORD", root_password
-        yield "MINIO_ADMIN_URI", "http://%s:%s@%s" % (
-            root_user, root_password, self.get_service_fqdn())
 
     async def generate_claim_secret(self):
         service_fqdn = self.get_service_fqdn()
         bucket_password = self.generate_random_string(128)
         access_key = bucket_name = self.get_bucket_name()
-        yield "BASE_URI", "http://%s/%s/" % (service_fqdn, bucket_name)
+
+        # If specified in instance secret use it, otherwise derive from service FQDN
+        endpoint_url = self.get_s3_endpoint_url()
+
+        yield "AWS_ENDPOINTS", endpoint_url
+        yield "AWS_S3_ENDPOINT_URL", endpoint_url
+        yield "BASE_URI", "%s/%s/" % (endpoint_url, bucket_name)
         yield "BUCKET_NAME", bucket_name
-        yield "AWS_S3_ENDPOINT_URL", "http://%s" % self.get_service_fqdn()
+
         yield "AWS_DEFAULT_REGION", self.instance_secret.get("MINIO_REGION", "us-east-1")
         yield "AWS_ACCESS_KEY_ID", access_key
         yield "AWS_SECRET_ACCESS_KEY", bucket_password
@@ -103,7 +118,7 @@ class MinioBucketOperator(SharedMixin,
         bucket_name = self.get_bucket_name()
         async with httpx.AsyncClient() as requests:
             try:
-                base_url = "http://%s" % self.get_service_fqdn()
+                base_url = self.get_s3_endpoint_url()
                 url = "%s/%s/" % (base_url, bucket_name)
 
                 # Create bucket
@@ -125,7 +140,9 @@ class MinioBucketOperator(SharedMixin,
                         bucket_name, r.status_code))
                 await self.set_instance_condition(self.CONDITION_INSTANCE_BUCKET_QUOTA_SET)
             except httpx.ConnectError:
-                raise ReconcileError("Failed to connect to Minio at %s" % base_url)
+                raise ReconcileError("Failed to connect to Minio at %s, use AWS_S3_ENDPOINT_URL key in the generated secret to override" % base_url)
+            except httpx.ConnectTimeout:
+                raise ReconcileError("Timed out connecting to Minio at %s" % base_url)
 
         # Create Minio user
         exitcode, stdout, stderr = await self.invoke_minio_admin("user", "add", "s3",
@@ -156,7 +173,7 @@ class MinioBucketOperator(SharedMixin,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
             env=os.environ | {
-                "MC_HOST_s3": self.instance_secret["MINIO_ADMIN_URI"]
+                "MC_HOST_s3": self.get_minio_admin_uri()
             })
         await proc.wait()
         return proc.returncode, await proc.stdout.read(), await proc.stderr.read()
