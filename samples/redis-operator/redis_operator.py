@@ -52,8 +52,8 @@ class RedisBase(InstanceTaskMixin,
         yield "REDIS_MASTER_URI", "redis://%s@%s" % (pwd, master)
         yield "REDIS_SLAVE_URI", "redis://%s@%s" % (pwd, slave)
         for j in range(0, 16):
-            yield "REDIS_MASTER_%d_URI" % j, "redis://%s@%s/%d" % (pwd, master, j)
-            yield "REDIS_SLAVE_%d_URI" % j, "redis://%s@%s/%d" % (pwd, slave, j)
+            yield "REDIS_MASTER_%d_URI" % j, "redis://:%s@%s/%d" % (pwd, master, j)
+            yield "REDIS_SLAVE_%d_URI" % j, "redis://:%s@%s/%d" % (pwd, slave, j)
 
     async def get_redis_connection_for_pod(self, pod_name):
         hostname = "%s.%s" % (pod_name, self.get_headless_service_name())
