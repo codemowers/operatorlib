@@ -16,7 +16,7 @@ spec:
         app: redis-operator
     spec:
       containers:
-        - image: codemowers/redis-operator
+        - image: codemowers/redis-operator:latest
           name: redis-operator
           ports:
             - containerPort: 8000

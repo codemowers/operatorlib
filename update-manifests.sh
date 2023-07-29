@@ -22,7 +22,7 @@ for j in secret-claim-operator redis-operator keydb-operator minio-bucket-operat
     python3 samples/$j/$(echo $j | tr "-" "_").py nuke >> nuke-all.sh
     python3 samples/$j/$(echo $j | tr "-" "_").py generate-crds > $p/$j-crds.yaml
     python3 samples/$j/$(echo $j | tr "-" "_").py generate-rbac > $p/$j-rbac.yaml
-    python3 samples/$j/$(echo $j | tr "-" "_").py generate-deployment --image codemowers/$j > $p/$j-deployment.yaml
+    python3 samples/$j/$(echo $j | tr "-" "_").py generate-deployment --image codemowers/$j:latest > $p/$j-deployment.yaml
     ns=$(cat $p/$j-rbac.yaml  | grep namespace | head -n1 | cut -d ":" -f 2 | xargs)
     cat << EOF >> argocd-applications.yaml
 ---
