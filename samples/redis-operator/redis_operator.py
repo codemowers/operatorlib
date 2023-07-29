@@ -151,6 +151,7 @@ class Redis(RedisBase):
     SINGULAR = "Redis"
     PLURAL = "Redises"
 
+    _current_masters = {}
     _redis_commander_connections = {}
 
     async def reconcile_redis_commander_config(self):
@@ -254,7 +255,7 @@ class Redis(RedisBase):
         pod_names = self.get_pod_names()
         headless_service_name = self.get_headless_service_name()
 
-        current_master = None
+        current_master = self._current_masters.get(self.name)
 
         print("Polling pods of %s %s/%s" % (self.SINGULAR, self.namespace, self.name))
         healthy_pods = list()
@@ -336,7 +337,7 @@ class Redis(RedisBase):
                     "path": "/metadata/labels/codemowers.cloud~1cluster-role",
                     "value": role
                 }])
-
+        self._current_masters[self.name] = current_master
         if not (self.class_spec["replicas"] >= 2):
             raise InstanceTaskMixin.InstanceTaskDisabled(
                 "Not enough replicas (2+) to repeatedly perform master election")
@@ -367,6 +368,26 @@ class Redis(RedisBase):
 
         # Assume it's the first container in the pod
         container_spec = pod_spec["containers"][0]
+        container_spec["volumeMounts"] = [{
+            "name": "config",
+            "mountPath": "/etc/redis",
+            "readOnly": True
+        }]
+        container_spec["env"] = [{
+            "name": "CLUSTER_MASTER",
+            "valueFrom": {
+                "fieldRef": {
+                    "fieldPath": "metadata.labels['codemowers.cloud/cluster-master']"
+                }
+            }
+        }, {
+            "name": "CLUSTER_ROLE",
+            "valueFrom": {
+                "fieldRef": {
+                    "fieldPath": "metadata.labels['codemowers.cloud/cluster-role']"
+                }
+            }
+        }]
 
         args = [
             "/etc/redis/redis.conf",
@@ -388,34 +409,23 @@ class Redis(RedisBase):
         if storage_class:
             container_spec["resources"]["limits"]["memory"] = "%dMi" % (self.get_capacity() // 524288)
         else:
-            # Disable BGSAVE if no PV-s are attached
+            pod_spec["containers"][0]["volumeMounts"].append({
+                "name": "data",
+                "mountPath": "/data",
+            })
+            pod_spec["volumes"].append({
+                "name": "data",
+                "emptyDir": {
+                    "sizeLimit": self.get_humanized_persistent_volume_capacity()
+                }
+            })
+
             args += [
-                "--save",
-                ""
+                "--save", ""
             ]
 
         # Create stateful set
         container_spec["args"] = container_spec.get("args", []) + args
-        container_spec["volumeMounts"] = [{
-            "name": "config",
-            "mountPath": "/etc/redis",
-            "readOnly": True
-        }]
-        container_spec["env"] = [{
-            "name": "CLUSTER_MASTER",
-            "valueFrom": {
-                "fieldRef": {
-                    "fieldPath": "metadata.labels['codemowers.cloud/cluster-master']"
-                }
-            }
-        }, {
-            "name": "CLUSTER_ROLE",
-            "valueFrom": {
-                "fieldRef": {
-                    "fieldPath": "metadata.labels['codemowers.cloud/cluster-role']"
-                }
-            }
-        }]
         return pod_spec
 
 

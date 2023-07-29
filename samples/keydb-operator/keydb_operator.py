@@ -61,6 +61,20 @@ class KeyDB(RedisBase):
         container_spec = pod_spec["containers"][0]
         container_spec["workingDir"] = "/data"
 
+        container_spec["volumeMounts"] = [{
+            "name": "config",
+            "mountPath": "/etc/redis",
+            "readOnly": True
+        }]
+
+        for script in ("entrypoint",):
+            container_spec["volumeMounts"].append({
+                "name": "scripts",
+                "mountPath": "/%s.sh" % script,
+                "subPath": "%s.sh" % script,
+                "readOnly": True,
+            })
+
         args = [
             "--maxmemory",
             "%d" % self.get_capacity(),
@@ -84,9 +98,19 @@ class KeyDB(RedisBase):
         if storage_class:
             container_spec["resources"]["limits"]["memory"] = "%dMi" % (self.get_capacity() // 524288)
         else:
+            pod_spec["containers"][0]["volumeMounts"].append({
+                "name": "data",
+                "mountPath": "/data",
+            })
+            pod_spec["volumes"].append({
+                "name": "data",
+                "emptyDir": {
+                    "sizeLimit": self.get_humanized_persistent_volume_capacity()
+                }
+            })
+
             args += [
-                "--save",
-                ""
+                "--save", ""
             ]
 
         # Create stateful set
@@ -99,19 +123,7 @@ class KeyDB(RedisBase):
             "name": "REPLICAS",
             "value": " ".join(self.get_pod_names())
         }]
-        container_spec["volumeMounts"] = [{
-            "name": "config",
-            "mountPath": "/etc/redis",
-            "readOnly": True
-        }]
 
-        for script in ("entrypoint",):
-            container_spec["volumeMounts"].append({
-                "name": "scripts",
-                "mountPath": "/%s.sh" % script,
-                "subPath": "%s.sh" % script,
-                "readOnly": True,
-            })
 
         return pod_spec
 
