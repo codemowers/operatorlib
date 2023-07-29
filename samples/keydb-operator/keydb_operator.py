@@ -62,7 +62,6 @@ class KeyDB(RedisBase):
         container_spec["workingDir"] = "/data"
 
         args = [
-            "/etc/redis/redis.conf",
             "--maxmemory",
             "%d" % self.get_capacity(),
         ]
@@ -91,6 +90,7 @@ class KeyDB(RedisBase):
             ]
 
         # Create stateful set
+        container_spec["command"] = ["/entrypoint.sh"]
         container_spec["args"] = container_spec.get("args", []) + args
         container_spec["env"] = [{
             "name": "SERVICE_NAME",
