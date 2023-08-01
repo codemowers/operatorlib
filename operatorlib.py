@@ -1375,7 +1375,7 @@ class ConsoleMixin():
         """
         Generate Service manifest for console service
         """
-        return super().generate_manifests() + [{
+        return super().generate_manifests() + ([{
             "kind": "Service",
             "apiVersion": "v1",
             "metadata": {
@@ -1386,7 +1386,7 @@ class ConsoleMixin():
                 "ownerReferences": [self.get_instance_owner()],
             },
             "spec": self.generate_console_service()
-        }]
+        }] if self.class_spec.get("podSpec") else [])
 
 
 class HeadlessMixin():
@@ -1415,7 +1415,7 @@ class HeadlessMixin():
         """
         Generate Service manifest for headless service
         """
-        return super().generate_manifests() + [{
+        return super().generate_manifests() + ([{
             "kind": "Service",
             "apiVersion": "v1",
             "metadata": {
@@ -1426,7 +1426,7 @@ class HeadlessMixin():
                 "ownerReferences": [self.get_instance_owner()],
             },
             "spec": self.generate_headless_service()
-        }]
+        }] if self.class_spec.get("podSpec") else [])
 
 
 class ServiceMixin():
@@ -1461,7 +1461,7 @@ class ServiceMixin():
         }
 
     def generate_manifests(self):
-        return super().generate_manifests() + [{
+        return super().generate_manifests() + ([{
             "kind": "Service",
             "apiVersion": "v1",
             "metadata": {
@@ -1472,7 +1472,7 @@ class ServiceMixin():
                 "ownerReferences": [self.get_instance_owner()],
             },
             "spec": self.generate_service()
-        }]
+        }] if self.class_spec.get("podSpec") else [])
 
 
 class PrimarySecondaryMixin():
@@ -1536,7 +1536,7 @@ class PrimarySecondaryMixin():
         """
         Generate Service manifests for primary-secondary application
         """
-        return super().generate_manifests() + [{
+        return super().generate_manifests() + ([{
             "kind": "Service",
             "apiVersion": "v1",
             "metadata": {
@@ -1560,7 +1560,7 @@ class PrimarySecondaryMixin():
                 "ownerReferences": [self.get_instance_owner()],
             },
             "spec": self.generate_secondary_service()
-        }]
+        }] if self.class_spec.get("podSpec") else [])
 
 
 class UpstreamMixin():
