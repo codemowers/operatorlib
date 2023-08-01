@@ -679,6 +679,7 @@ class InstanceMixin():
             except ApiException as e:
                 if e.status == 410:
                     print("Watch for %s expired, restarting" % cls.PLURAL)
+                    kwargs.pop("resource_version", None)
                     await asyncio.sleep(3)
                 else:
                     print("Kubernetes API error in instance reconciler loop:", e)
@@ -1200,6 +1201,7 @@ class ClaimMixin():
             except ApiException as e:
                 if e.status == 410:
                     print("Watch for %s expired, restarting" % cls.get_claim_plural())
+                    kwargs.pop("resource_version", None)
                     await asyncio.sleep(3)
                 else:
                     print("Kubernetes API error in claim reconciler loop:", e)
