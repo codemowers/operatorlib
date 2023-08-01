@@ -49,8 +49,8 @@ class RedisBase(InstanceTaskMixin,
         yield "REDIS_SLAVE", slave
         yield "REDIS_PORT", "6379"
         yield "REDIS_PASSWORD", pwd
-        yield "REDIS_MASTER_URI", "redis://%s@%s" % (pwd, master)
-        yield "REDIS_SLAVE_URI", "redis://%s@%s" % (pwd, slave)
+        yield "REDIS_MASTER_URI", "redis://:%s@%s" % (pwd, master)
+        yield "REDIS_SLAVE_URI", "redis://:%s@%s" % (pwd, slave)
         for j in range(0, 16):
             yield "REDIS_MASTER_%d_URI" % j, "redis://:%s@%s/%d" % (pwd, master, j)
             yield "REDIS_SLAVE_%d_URI" % j, "redis://:%s@%s/%d" % (pwd, slave, j)
