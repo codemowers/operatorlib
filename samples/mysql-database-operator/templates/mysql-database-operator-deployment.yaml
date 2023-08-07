@@ -16,7 +16,7 @@ spec:
         app: mysql-database-operator
     spec:
       containers:
-        - image: codemowers/mysql-database-operator:latest
+        - image: docker.io/codemowers/mysql-database-operator:latest
           name: mysql-database-operator
           ports:
             - containerPort: 8000

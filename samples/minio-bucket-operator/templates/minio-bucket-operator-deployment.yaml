@@ -16,7 +16,7 @@ spec:
         app: minio-bucket-operator
     spec:
       containers:
-        - image: codemowers/minio-bucket-operator:latest
+        - image: docker.io/codemowers/minio-bucket-operator:latest
           name: minio-bucket-operator
           ports:
             - containerPort: 8000

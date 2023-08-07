@@ -16,7 +16,7 @@ spec:
         app: postgres-database-operator
     spec:
       containers:
-        - image: codemowers/postgres-database-operator:latest
+        - image: docker.io/codemowers/postgres-database-operator:latest
           name: postgres-database-operator
           ports:
             - containerPort: 8000
