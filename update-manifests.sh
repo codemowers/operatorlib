@@ -52,7 +52,7 @@ build:
   artifacts:
     - docker:
         dockerfile: samples/$j/Dockerfile
-      image: codemowers/$j
+      image: docker.io/codemowers/$j
 deploy:
   kubectl:
     flags:

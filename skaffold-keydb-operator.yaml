@@ -7,7 +7,7 @@ build:
   artifacts:
     - docker:
         dockerfile: samples/keydb-operator/Dockerfile
-      image: codemowers/keydb-operator
+      image: docker.io/codemowers/keydb-operator
 deploy:
   kubectl:
     flags:

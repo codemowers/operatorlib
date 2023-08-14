@@ -7,7 +7,7 @@ build:
   artifacts:
     - docker:
         dockerfile: samples/keydb-operator/Dockerfile
-      image: codemowers/keydb-operator
+      image: docker.io/codemowers/keydb-operator
 deploy:
   kubectl:
     flags:
@@ -25,7 +25,7 @@ build:
   artifacts:
     - docker:
         dockerfile: samples/minio-bucket-operator/Dockerfile
-      image: codemowers/minio-bucket-operator
+      image: docker.io/codemowers/minio-bucket-operator
 deploy:
   kubectl:
     flags:
@@ -43,7 +43,7 @@ build:
   artifacts:
     - docker:
         dockerfile: samples/mysql-database-operator/Dockerfile
-      image: codemowers/mysql-database-operator
+      image: docker.io/codemowers/mysql-database-operator
 deploy:
   kubectl:
     flags:
@@ -61,7 +61,7 @@ build:
   artifacts:
     - docker:
         dockerfile: samples/postgres-database-operator/Dockerfile
-      image: codemowers/postgres-database-operator
+      image: docker.io/codemowers/postgres-database-operator
 deploy:
   kubectl:
     flags:
@@ -79,7 +79,7 @@ build:
   artifacts:
     - docker:
         dockerfile: samples/redis-operator/Dockerfile
-      image: codemowers/redis-operator
+      image: docker.io/codemowers/redis-operator
 deploy:
   kubectl:
     flags:
@@ -97,7 +97,7 @@ build:
   artifacts:
     - docker:
         dockerfile: samples/secret-claim-operator/Dockerfile
-      image: codemowers/secret-claim-operator
+      image: docker.io/codemowers/secret-claim-operator
 deploy:
   kubectl:
     flags:

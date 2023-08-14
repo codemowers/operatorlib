@@ -7,7 +7,7 @@ build:
   artifacts:
     - docker:
         dockerfile: samples/mysql-database-operator/Dockerfile
-      image: codemowers/mysql-database-operator
+      image: docker.io/codemowers/mysql-database-operator
 deploy:
   kubectl:
     flags:

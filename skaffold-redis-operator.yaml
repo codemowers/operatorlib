@@ -7,7 +7,7 @@ build:
   artifacts:
     - docker:
         dockerfile: samples/redis-operator/Dockerfile
-      image: codemowers/redis-operator
+      image: docker.io/codemowers/redis-operator
 deploy:
   kubectl:
     flags:

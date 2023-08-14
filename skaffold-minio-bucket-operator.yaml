@@ -7,7 +7,7 @@ build:
   artifacts:
     - docker:
         dockerfile: samples/minio-bucket-operator/Dockerfile
-      image: codemowers/minio-bucket-operator
+      image: docker.io/codemowers/minio-bucket-operator
 deploy:
   kubectl:
     flags:
