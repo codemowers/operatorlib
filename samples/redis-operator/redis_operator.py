@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+
 import redis.asyncio as redis
 import itertools
 import json
@@ -31,6 +32,9 @@ class RedisBase(InstanceTaskMixin,
 
     _redis_connection_pools = {}
 
+    CONDITION_INSTANCE_PRIMARY_ELECTED = "MasterElected"
+    CONDITION_INSTANCE_PRIMARY_CONFIGURED = "ReplicationConfigured"
+
     @classmethod
     def generate_operator_cluster_role_rules(cls):
         yield from super().generate_operator_cluster_role_rules()
@@ -60,8 +64,15 @@ class RedisBase(InstanceTaskMixin,
         if hostname not in self._redis_connection_pools:
             self._redis_connection_pools[hostname] = redis.ConnectionPool(
                 host=hostname,
-                password=self.instance_secret["REDIS_PASSWORD"])
+                password=self.instance_secret["REDIS_PASSWORD"],
+                socket_timeout=10)
         return redis.Redis(connection_pool=self._redis_connection_pools[hostname])
+
+    def parse_member_state_recovering(self, redis_info):
+        return redis_info.get("master_sync_in_progress", 0) or \
+            redis_info.get("loading", 0) or \
+            redis_info.get("async_loading", 0) or \
+            redis_info.get("shutdown_in_milliseconds", 0)
 
     async def generate_pod_metrics(self, pod_name):
         conn = await self.get_redis_connection_for_pod(pod_name)
@@ -76,7 +87,7 @@ class RedisBase(InstanceTaskMixin,
                 pod_name, e))
             yield self.METRIC_CLUSTER_MEMBER_STATE, 1, [self.CLUSTER_MEMBER_STATE_ERROR]
         else:
-            if redis_info.get("master_sync_in_progress", 0):
+            if self.parse_member_state_recovering(redis_info):
                 yield self.METRIC_CLUSTER_MEMBER_STATE, 1, \
                     [self.CLUSTER_MEMBER_STATE_RECOVERING]
             else:
@@ -105,7 +116,14 @@ class RedisBase(InstanceTaskMixin,
             yield self.METRIC_REDIS_MASTER_REPL_OFFSET, \
                 redis_info["master_repl_offset"], \
                 [redis_info["role"]]
+            yield self.METRIC_REDIS_MEMORY_FRAGMENTATION_RATIO, \
+                redis_info["mem_fragmentation_ratio"], \
+                [redis_info["role"]]
 
+    METRIC_REDIS_MEMORY_FRAGMENTATION_RATIO = \
+        "redis_memory_fragmentation_ratio", \
+        "Memory fragmentation ratio", \
+        ["instance", "pod", "role"]
     METRIC_REDIS_MASTER_REPL_OFFSET = \
         "redis_replication_offset", \
         "The server's current replication offset (master_repl_offset)", \
@@ -151,7 +169,7 @@ class Redis(RedisBase):
     SINGULAR = "Redis"
     PLURAL = "Redises"
 
-    _current_masters = {}
+    _redis_cluster_states = {}
     _redis_commander_connections = {}
 
     async def reconcile_redis_commander_config(self):
@@ -255,14 +273,17 @@ class Redis(RedisBase):
         pod_names = self.get_pod_names()
         headless_service_name = self.get_headless_service_name()
 
-        current_master = self._current_masters.get(self.name)
+        try:
+            current_master, _ = self.get_instance_condition(self.CONDITION_INSTANCE_PRIMARY_ELECTED)
+        except self.InstanceConditionNotSet:
+            current_master = None
 
-        print("Polling pods of %s %s/%s" % (self.SINGULAR, self.namespace, self.name))
         healthy_pods = list()
+        following = {}
         for pod_name in pod_names:
             conn = await self.get_redis_connection_for_pod(pod_name)
             try:
-                await conn.info("replication")
+                redis_info = await conn.info("replication")
             except redis.ConnectionError as e:
                 print("Failed to connect to pod %s: %s" % (
                     pod_name, e))
@@ -272,18 +293,20 @@ class Redis(RedisBase):
                     pod_name, e))
                 member_state = self.CLUSTER_MEMBER_STATE_ERROR
             else:
-                member_state = self.CLUSTER_MEMBER_STATE_ONLINE
+                following[pod_name] = redis_info.get("master_host")
+                if self.parse_member_state_recovering(redis_info):
+                    member_state = self.CLUSTER_MEMBER_STATE_RECOVERING
+                else:
+                    member_state = self.CLUSTER_MEMBER_STATE_ONLINE
 
             if member_state != self.CLUSTER_MEMBER_STATE_ONLINE:
                 continue
             healthy_pods.append(pod_name)
 
-        cluster_state = self.CLUSTER_STATE_UNKNOWN
-
         if upstream_secret_reference:
             # The upstream secret should contain key redis.conf with
             # masterauth, requirepass, replicaof
-            pass
+            return
         else:
             if healthy_pods:
                 if len(healthy_pods) == len(pod_names):
@@ -293,32 +316,59 @@ class Redis(RedisBase):
                 else:
                     cluster_state = self.CLUSTER_STATE_STALE
 
-                # Pods don't have upstream master and we should elect master
-                if current_master not in healthy_pods:
-                    current_master = healthy_pods[0]
-                    print("  Electing %s as new master for %s %s/%s" % (
-                        current_master,
-                        self.SINGULAR, self.namespace, self.name))
-                    try:
-                        # Try to set all healthy replicaofpods as non-writable masters
-                        for pod_name in healthy_pods:
-                            conn = await self.get_redis_connection_for_pod(pod_name)
-                            print("    Issuing `replicaof no one` on %s" % pod_name)
-                            await conn.replicaof("NO", "ONE")
-                    except redis.BusyLoadingError:
-                        print("    Pod", pod_name, "busy loading")
-                    else:
-                        # If unsetting master on pods succeeds,
-                        # Reconfigure slaves to follow new master
-                        for pod_name in healthy_pods:
-                            if pod_name == current_master:
-                                continue
-                            conn = await self.get_redis_connection_for_pod(pod_name)
-                            print("    Issuing `replicaof %s.%s` on %s" % (current_master, headless_service_name, pod_name))
-                            await conn.replicaof(
-                                "%s.%s" % (current_master, headless_service_name),
-                                "6379")
-                        await self.set_instance_condition(self.CONDITION_INSTANCE_MASTER_ELECTED)
+                prev_state = self._redis_cluster_states.get(self.name, self.CLUSTER_STATE_UNKNOWN)
+                self._redis_cluster_states[self.name] = cluster_state
+
+                if prev_state != cluster_state:
+                    print("%s %s cluster transitioned to state %s" % (
+                        self.SINGULAR, self.name, cluster_state))
+
+                if cluster_state == self.CLUSTER_STATE_STALE:
+                    print("  Not enough healthy pods to perform master election")
+                    return
+
+            reconfig_required = False
+
+            if current_master not in healthy_pods:
+                current_master = healthy_pods[0]
+                print("  Electing %s as new master for %s %s/%s" % (
+                    current_master,
+                    self.SINGULAR, self.namespace, self.name))
+                await self.set_instance_condition(
+                    self.CONDITION_INSTANCE_PRIMARY_ELECTED,
+                    current_master)
+                reconfig_required = True
+
+            master_host = "%s.%s" % (current_master, headless_service_name)
+
+            for pod_name in healthy_pods:
+                m = following.get(pod_name, "")
+                if m and pod_name == current_master:
+                    reconfig_required = True
+                if m and m != master_host:
+                    reconfig_required = True
+
+            if reconfig_required:
+                await self.clear_instance_condition(
+                    self.CONDITION_INSTANCE_PRIMARY_CONFIGURED)
+
+        try:
+            _ = self.get_instance_condition(self.CONDITION_INSTANCE_PRIMARY_CONFIGURED)
+        except self.InstanceConditionNotSet:
+            pass
+        else:
+            return
+
+        # Reconfigure slaves to follow new master
+        for pod_name in healthy_pods:
+            conn = await self.get_redis_connection_for_pod(pod_name)
+            if pod_name == current_master:
+                if following.get(pod_name, ""):
+                    print("    Issuing `replicaof no one` on %s" % (pod_name))
+                    await conn.replicaof("no", "one")
+            elif following.get(pod_name, "") != master_host:
+                print("    Issuing `replicaof %s` on %s" % (master_host, pod_name))
+                await conn.replicaof(master_host, "6379")
 
         for pod_name in pod_names:
             if pod_name == current_master:
@@ -337,7 +387,8 @@ class Redis(RedisBase):
                     "path": "/metadata/labels/codemowers.cloud~1cluster-role",
                     "value": role
                 }])
-        self._current_masters[self.name] = current_master
+        await self.set_instance_condition(
+            self.CONDITION_INSTANCE_PRIMARY_CONFIGURED)
         if not (self.class_spec["replicas"] >= 2):
             raise InstanceTaskMixin.InstanceTaskDisabled(
                 "Not enough replicas (2+) to repeatedly perform master election")
@@ -436,6 +487,7 @@ assert "podSpec" in [j[0] for j in Redis.get_optional_claim_properties()]
 assert "podSpec" in [j[0] for j in Redis.get_class_properties()]
 assert "replicas" in [j[0] for j in Redis.get_class_properties()]
 assert "storageClass" in [j[0] for j in Redis.get_class_properties()]
+
 
 if __name__ == "__main__":
     Redis.run()

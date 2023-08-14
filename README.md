@@ -24,3 +24,11 @@ find samples/ -name "*-rbac.yaml" -exec kubectl apply -f {} \;
 find samples/ -name "*-class.yaml" -exec kubectl apply -f {} \;
 skaffold dev --build-concurrency=0
 ```
+
+To wipe status conditions array:
+
+```
+for j in $(kubectl get redises.codemowers.cloud -o name); do
+  kubectl patch --type=merge --subresource=status $j -p '{"status":{"conditions":[]}}';
+done
+```

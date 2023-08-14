@@ -106,7 +106,11 @@ class MinioBucketOperator(SharedMixin,
     async def reconcile_instance(self):
         await super().reconcile_instance()
 
-        if self.get_instance_condition(self.CONDITION_INSTANCE_POLICY_ATTACHED):
+        try:
+            self.get_instance_condition(self.CONDITION_INSTANCE_PROMETHEUS_BEARER_TOKEN_GENERATED)
+        except self.InstanceConditionNotSet:
+            pass
+        else:
             return
 
         region = self.instance_secret.get("MINIO_REGION", "us-east-1")
@@ -122,7 +126,7 @@ class MinioBucketOperator(SharedMixin,
                 url = "%s/%s/" % (base_url, bucket_name)
 
                 # Create bucket
-                print("Creating bucket %s" % url)
+                print("  Creating bucket %s" % url)
                 r = await requests.put(url, auth=aws)
                 if r.status_code not in (200, 409):
                     raise ReconcileError("Creating bucket %s returned status code %d" % (

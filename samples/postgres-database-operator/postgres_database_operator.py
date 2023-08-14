@@ -125,7 +125,11 @@ class PostgresDatabaseOperator(ClaimSecretMixin,
     async def reconcile_instance(self):
         await super().reconcile_instance()
 
-        if self.get_instance_condition(self.CONDITION_INSTANCE_PRIVILEGES_GRANTED):
+        try:
+            self.get_instance_condition(self.CONDITION_INSTANCE_PRIVILEGES_GRANTED)
+        except self.InstanceConditionNotSet:
+            pass
+        else:
             return
 
         hostname, port, superuser, password = await self.read_target_secrets()

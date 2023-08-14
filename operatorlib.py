@@ -361,6 +361,9 @@ class InstanceMixin():
     INSTANCE_STATE_BOUND = "Bound"
     INSTANCE_STATE_RELEASED = "Released"
 
+    class InstanceConditionNotSet(Exception):
+        pass
+
     async def generate_instance_metrics(self):
         if False:
             yield
@@ -422,37 +425,82 @@ class InstanceMixin():
         for j in self.status["conditions"]:
             if j["type"] == condition:
                 if j["status"] == "True":
-                    return True
-        return False
+                    return j.get("message", ""), datetime.strptime(
+                        j["lastTransitionTime"], "%Y-%m-%dT%H:%M:%SZ")
+        raise self.InstanceConditionNotSet()
 
-    async def set_instance_condition(self, condition):
+    async def clear_instance_condition(self, condition, msg=""):
+        for index, j in enumerate(self.status["conditions"]):
+            if j["type"] == condition:
+                if j["status"] == "False":
+                    return
+                else:
+                    path = "/status/conditions/%d" % index
+                    patches = [{
+                        "op": "test",
+                        "path": "%s/type" % path,
+                        "value": condition,
+                    }, {
+                        "op": "replace",
+                        "path": "%s/status" % path,
+                        "value": "False",
+                    }, {
+                        "op": "remove",
+                        "path": "%s/message" % path,
+                    }, {
+                        "op": "replace",
+                        "path": "%s/lastTransitionTime" % path,
+                        "value": self.get_json_utcnow(),
+                    }]
+                    break
+        else:
+            raise ValueError("Condition set not initialized correctly")
+
+        try:
+            await self.patch_instance_status(patches)
+        except ApiException as e:
+            if e.status == 409:
+                print("Failed to update %s %s status: %s" % (
+                    self.SINGULAR,
+                    self.name,
+                    e))
+            else:
+                raise
+
+        # Update conditions array in the cached instance
         for j in self.status["conditions"]:
             if j["type"] == condition:
-                if j["status"] == "True":
-                    return
-        for index, j in enumerate(self.get_instance_condition_set()):
-            if j == condition:
-                path = "/status/conditions/%d" % index
+                j["status"] = "False"
                 break
-        else:
-            raise
 
-        patches = [{
-            "op": "test",
-            "path": "%s/type" % path,
-            "value": condition,
-        }, {
-            "op": "replace",
-            "path": "%s/status" % path,
-            "value": "True",
-        }, {
-            "op": "replace",
-            "path": "%s/lastTransitionTime" % path,
-            "value": self.get_json_utcnow(),
-        }]
-        print("  Patching %s %s status:" % (self.SINGULAR, self.name))
-        for patch in patches:
-            print("    ", patch)
+
+    async def set_instance_condition(self, condition, msg=""):
+        for index, j in enumerate(self.status["conditions"]):
+            if j["type"] == condition:
+                if j["status"] == "True" and j.get("message", "") == msg:
+                    return
+                else:
+                    path = "/status/conditions/%d" % index
+                    patches = [{
+                        "op": "test",
+                        "path": "%s/type" % path,
+                        "value": condition,
+                    }, {
+                        "op": "replace",
+                        "path": "%s/status" % path,
+                        "value": "True",
+                    }, {
+                        "op": "replace",
+                        "path": "%s/message" % path,
+                        "value": msg,
+                    }, {
+                        "op": "replace",
+                        "path": "%s/lastTransitionTime" % path,
+                        "value": self.get_json_utcnow(),
+                    }]
+                    break
+        else:
+            raise ValueError("Condition set not initialized correctly")
 
         try:
             await self.patch_instance_status(patches)
@@ -645,7 +693,6 @@ class InstanceMixin():
                             instance.setup()
                             prev_instance = cls.cached_instances.get(body["metadata"]["name"], None)
                             if prev_instance and prev_instance.generation == instance.generation:
-                                print("No spec changes for %s %s" % (cls.SINGULAR, instance.name))
                                 continue
                             print("Reconciling %s %s" % (cls.SINGULAR, instance.name))
                             cls._counter_instance_reconcile_count += 1
@@ -1563,6 +1610,18 @@ class PrimarySecondaryMixin():
         }] if self.class_spec.get("podSpec") else [])
 
 
+    @classmethod
+    def get_instance_printer_columns(cls):
+        """
+        Add current primary pod column
+        """
+        return super().get_instance_printer_columns() + [{
+            "name": "Primary pod",
+            "jsonPath": ".status.conditions[?(@.type==\"%s\")].message" %
+                cls.CONDITION_INSTANCE_PRIMARY_ELECTED,
+            "type": "string",
+        }]
+
 class UpstreamMixin():
     """
     Handle the case of attaching in cluster resources as downstream
@@ -1674,7 +1733,7 @@ class UpstreamMixin():
 
 class ClusterManagementMixin():
     """
-    ClusterManagementMixin simplifies implementing master election for
+    ClusterManagementMixin simplifies implementing primary election for
     software that doesn't support built-in failover
     """
 
@@ -1709,12 +1768,14 @@ class ClusterManagementMixin():
         "Cluster state", \
         ["instance", "state"]
 
-    CONDITION_INSTANCE_MASTER_ELECTED = "MasterElected"
+    CONDITION_INSTANCE_PRIMARY_ELECTED = "PrimaryElected"
+    CONDITION_INSTANCE_PRIMARY_CONFIGURED = "PrimaryConfigured"
 
     @classmethod
     def get_instance_condition_set(cls):
         return super().get_instance_condition_set() + [
-            cls.CONDITION_INSTANCE_MASTER_ELECTED,
+            cls.CONDITION_INSTANCE_PRIMARY_ELECTED,
+            cls.CONDITION_INSTANCE_PRIMARY_CONFIGURED
         ]
 
     @classmethod
@@ -2190,6 +2251,9 @@ class CustomResourceMixin:
     """
     Instantiate another custom resource in the target namespace
     """
+    def generate_custom_resources(self):
+        return []
+
     async def reconcile_instance(self):
         """
         Restart instance tasks if instance is reconciled
@@ -2250,7 +2314,7 @@ class MonitoringMixin:
                     repr(label_values),
                     key))
             if label_keys:
-                z = "%s{%s}" % (key, ",".join(["%s=%s" % (k, repr(v)) for k, v in zip(label_keys, label_values)]))
+                z = "%s{%s}" % (key, ",".join(["%s=\"%s\"" % (k, v) for k, v in zip(label_keys, label_values)]))
             else:
                 z = key
             yield "%s %s" % (z, value)
@@ -2270,20 +2334,21 @@ class MonitoringMixin:
 
 
 class PodMonitorMixin:
+
     @classmethod
     def generate_operator_cluster_role_rules(cls):
         yield from super().generate_operator_cluster_role_rules()
         yield "monitoring.coreos.com", "podmonitors", ("create", "patch")
 
-    def generate_pod_monitor(self):
+    def generate_pod_monitor_spec(self):
         return {
             "selector": {
                 "matchLabels": self.labels
             }
         }
 
-    def generate_manifests(self):
-        return super().generate_manifests() + [{
+    def generate_custom_resources(self):
+        return super().generate_custom_resources() + [{
             "apiVersion": "monitoring.coreos.com/v1",
             "kind": "PodMonitor",
             "metadata": {
@@ -2293,8 +2358,36 @@ class PodMonitorMixin:
                 "annotations": dict(self.get_annotations() + [("codemowers.cloud/mixin", "PodMonitorMixin")]),
                 "ownerReferences": [self.get_instance_owner()],
             },
-            "spec": self.generate_pod_monitor()
+            "spec": self.generate_pod_monitor_spec()
         }]
+
+class ServiceMonitorMixin:
+    @classmethod
+    def generate_operator_cluster_role_rules(cls):
+        yield from super().generate_operator_cluster_role_rules()
+        yield "monitoring.coreos.com", "servicemonitors", ("create", "patch")
+
+    def generate_service_monitor_spec(self):
+        return {
+            "selector": {
+                "matchLabels": self.labels
+            }
+        }
+
+    def generate_custom_resources(self):
+        return super().generate_custom_resources() + [{
+            "apiVersion": "monitoring.coreos.com/v1",
+            "kind": "ServiceMonitor",
+            "metadata": {
+                "namespace": self.get_target_namespace(),
+                "name": self.get_target_name(),
+                "labels": self.labels,
+                "annotations": dict(self.get_annotations() + [("codemowers.cloud/mixin", "ServiceMonitorMixin")]),
+                "ownerReferences": [self.get_instance_owner()],
+            },
+            "spec": self.generate_service_monitor_spec()
+        }]
+
 
 
 class InstanceTaskMixin:
@@ -2550,6 +2643,35 @@ class ClassedOperator(InstanceClaimMixin, InstanceMixin, ClaimMixin, Operator):
                         "resourceVersion": body["metadata"]["resourceVersion"]}})
             raise ReconcileDeferred("Status initialized")
 
+        patches = []
+        for condition in cls.get_instance_condition_set():
+            if condition not in [j["type"] for j in body["status"]["conditions"]]:
+                patches += [{
+                    "op": "add",
+                    "path": "/status/conditions/-",
+                    "value": {
+                        "type": condition,
+                        "status": "False",
+                        "lastTransitionTime": cls.get_json_utcnow(),
+                    }
+                }]
+
+        if patches:
+            try:
+                await co.patch_cluster_custom_object_status(
+                    cls.GROUP, cls.VERSION,
+                    cls.PLURAL.lower(), body["metadata"]["name"], patches)
+            except ApiException as e:
+                if e.status == 409:
+                    print("Failed to update %s %s status: %s" % (
+                        cls.SINGULAR,
+                        cls.name,
+                        e))
+                else:
+                    raise
+            else:
+                raise ReconcileDeferred("Status conditions patches")
+
         i = cls(body, class_body, **args)
         i.co = co
         i.api_client = api_client
@@ -2634,6 +2756,7 @@ __all__ = \
     "PersistentVolumeClaimMixin", \
     "PodSpecMixin", \
     "PodMonitorMixin", \
+    "ServiceMonitorMixin", \
     "PrimarySecondaryMixin", \
     "ReplicasSpecMixin", \
     "RoutedMixin", \
