@@ -25,3 +25,30 @@ spec:
       imagePullSecrets:
         - name: regcred
       serviceAccountName: codemowers-cloud-mysql-database-operator
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: mysql-database-operator
+  name: mysql-database-operator
+  namespace: mysql-clusters
+spec:
+  ports:
+    - name: metrics
+      port: 8000
+      protocol: TCP
+  selector:
+    app: mysql-database-operator
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: mysql-database-operator
+  namespace: mysql-clusters
+spec:
+  endpoints:
+    - port: metrics
+  selector:
+    matchLabels:
+      app: mysql-database-operator

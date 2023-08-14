@@ -138,7 +138,7 @@ class Operator():
     @classmethod
     def generate_operator_deployment_definition(cls, image):
         sts_name = cls.OPERATOR
-        sts = [{
+        resources = [{
             "apiVersion": "apps/v1",
             "kind": "StatefulSet",
             "metadata": {
@@ -175,11 +175,47 @@ class Operator():
                     }
                 }
             }
+        }, {
+            "apiVersion": "v1",
+            "kind": "Service",
+            "metadata": {
+                "name": sts_name,
+                "labels": {
+                    "app": sts_name
+                }
+            },
+            "spec": {
+                "ports": [{
+                    "port": 8000,
+                    "protocol": "TCP",
+                    "name": "metrics"
+                }],
+                "selector": {
+                    "app": sts_name
+                }
+            }
+        }, {
+            "apiVersion": "monitoring.coreos.com/v1",
+            "kind": "ServiceMonitor",
+            "metadata": {
+                "name": sts_name,
+            },
+            "spec": {
+                "selector": {
+                    "matchLabels": {
+                        "app": sts_name
+                    }
+                },
+                "endpoints": [{
+                    "port": "metrics"
+                }]
+            }
         }]
         ns = cls.get_operator_namespace()
         if ns:
-            sts[0]["metadata"]["namespace"] = ns
-        return sts
+            for resource in resources:
+                resource["metadata"]["namespace"] = ns
+        return resources
 
     @classmethod
     def generate_operator_rbac_definition(cls):

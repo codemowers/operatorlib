@@ -25,3 +25,30 @@ spec:
       imagePullSecrets:
         - name: regcred
       serviceAccountName: codemowers-cloud-keydb-operator
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: keydb-operator
+  name: keydb-operator
+  namespace: keydb-clusters
+spec:
+  ports:
+    - name: metrics
+      port: 8000
+      protocol: TCP
+  selector:
+    app: keydb-operator
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: keydb-operator
+  namespace: keydb-clusters
+spec:
+  endpoints:
+    - port: metrics
+  selector:
+    matchLabels:
+      app: keydb-operator

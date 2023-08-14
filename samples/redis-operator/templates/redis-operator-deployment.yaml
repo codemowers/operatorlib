@@ -25,3 +25,30 @@ spec:
       imagePullSecrets:
         - name: regcred
       serviceAccountName: codemowers-cloud-redis-operator
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: redis-operator
+  name: redis-operator
+  namespace: redis-clusters
+spec:
+  ports:
+    - name: metrics
+      port: 8000
+      protocol: TCP
+  selector:
+    app: redis-operator
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: redis-operator
+  namespace: redis-clusters
+spec:
+  endpoints:
+    - port: metrics
+  selector:
+    matchLabels:
+      app: redis-operator

@@ -25,3 +25,30 @@ spec:
       imagePullSecrets:
         - name: regcred
       serviceAccountName: codemowers-cloud-postgres-database-operator
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: postgres-database-operator
+  name: postgres-database-operator
+  namespace: postgres-clusters
+spec:
+  ports:
+    - name: metrics
+      port: 8000
+      protocol: TCP
+  selector:
+    app: postgres-database-operator
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: postgres-database-operator
+  namespace: postgres-clusters
+spec:
+  endpoints:
+    - port: metrics
+  selector:
+    matchLabels:
+      app: postgres-database-operator

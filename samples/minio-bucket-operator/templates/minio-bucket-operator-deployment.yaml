@@ -25,3 +25,30 @@ spec:
       imagePullSecrets:
         - name: regcred
       serviceAccountName: codemowers-cloud-minio-bucket-operator
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: minio-bucket-operator
+  name: minio-bucket-operator
+  namespace: minio-clusters
+spec:
+  ports:
+    - name: metrics
+      port: 8000
+      protocol: TCP
+  selector:
+    app: minio-bucket-operator
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: minio-bucket-operator
+  namespace: minio-clusters
+spec:
+  endpoints:
+    - port: metrics
+  selector:
+    matchLabels:
+      app: minio-bucket-operator
