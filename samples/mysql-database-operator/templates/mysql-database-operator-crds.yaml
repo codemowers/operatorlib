@@ -109,6 +109,10 @@ spec:
                     containers:
                       items:
                         properties:
+                          args:
+                            items:
+                              type: string
+                            type: array
                           image:
                             type: string
                           imagePullPolicy:
@@ -249,6 +253,10 @@ spec:
                     containers:
                       items:
                         properties:
+                          args:
+                            items:
+                              type: string
+                            type: array
                           image:
                             type: string
                           imagePullPolicy:
@@ -316,6 +324,10 @@ spec:
                     containers:
                       items:
                         properties:
+                          args:
+                            items:
+                              type: string
+                            type: array
                           image:
                             type: string
                           imagePullPolicy:

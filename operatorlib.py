@@ -1956,6 +1956,10 @@ class PodSpecMixin():
                         "name": {"type": "string"},
                         "image": {"type": "string"},
                         "imagePullPolicy": {"type": "string"},
+                        "args": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                        },
                         "resources": cls.POD_RESOURCES,
                     }
                 }
