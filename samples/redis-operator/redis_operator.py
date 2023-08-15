@@ -458,8 +458,17 @@ class Redis(RedisBase):
         container_spec["resources"]["limits"]["memory"] = container_spec["resources"]["requests"]["memory"]
 
         if storage_class:
+            # Make sure there is enough time for disk dump
+            # assuming worst case scenario 50MB/s write speed
+            pod_spec["terminationGracePeriodSeconds"] = min(
+                self.get_capacity() // (1024 * 1024 * 50),
+                60)
+
             container_spec["resources"]["limits"]["memory"] = "%dMi" % (self.get_capacity() // 524288)
         else:
+            # Make sure replicas are able to replay operations from the master
+            pod_spec["terminationGracePeriodSeconds"] = 30
+
             pod_spec["containers"][0]["volumeMounts"].append({
                 "name": "data",
                 "mountPath": "/data",
@@ -475,8 +484,11 @@ class Redis(RedisBase):
                 "--save", ""
             ]
 
+        # Set shutdown timeout just below the Kubernetes grace period
+        args += ["--shutdown-timeout", str(int(pod_spec["terminationGracePeriodSeconds"] * 0.8))]
+
         # Create stateful set
-        container_spec["args"] = container_spec.get("args", []) + args
+        container_spec["args"] = args + container_spec.get("args", [])
         return pod_spec
 
 
