@@ -12,7 +12,7 @@ spec:
   podSpec:
     containers:
       - name: redis
-        image: library/redis:7.0.11@sha256:1008c73f08e9f913868e2fa2e843212b62ea5bf3c66435d87bc7a6207bc0f1b4
+        image: docker.io/library/redis:7.0.11@sha256:1008c73f08e9f913868e2fa2e843212b62ea5bf3c66435d87bc7a6207bc0f1b4
         imagePullPolicy: IfNotPresent
         args:
           - --activedefrag yes
