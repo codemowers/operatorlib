@@ -308,7 +308,9 @@ class Redis(RedisBase):
             # masterauth, requirepass, replicaof
             return
         else:
-            if healthy_pods:
+            if not healthy_pods:
+                cluster_state = self.CLUSTER_STATE_STALE
+            else:
                 if len(healthy_pods) == len(pod_names):
                     cluster_state = self.CLUSTER_STATE_ONLINE
                 elif len(healthy_pods) >= self.get_quorum_count():
@@ -323,9 +325,9 @@ class Redis(RedisBase):
                     print("%s %s cluster transitioned to state %s" % (
                         self.SINGULAR, self.name, cluster_state))
 
-                if cluster_state == self.CLUSTER_STATE_STALE:
-                    print("  Not enough healthy pods to perform master election")
-                    return
+            if cluster_state == self.CLUSTER_STATE_STALE:
+                print("  Not enough healthy pods to perform master election")
+                return
 
             reconfig_required = False
 
@@ -345,7 +347,7 @@ class Redis(RedisBase):
                 m = following.get(pod_name, "")
                 if m and pod_name == current_master:
                     reconfig_required = True
-                if m and m != master_host:
+                if not m or m != master_host:
                     reconfig_required = True
 
             if reconfig_required:
