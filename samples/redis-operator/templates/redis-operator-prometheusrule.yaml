@@ -1,0 +1,19 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: redis-operator
+spec:
+  groups:
+    - name: redis-operator
+      rules:
+        - alert: RedisReplicationSplitBrain
+          expr: count by (exported_instance) (sum by (id, exported_instance) (redis_replication_info)) > 1
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: Redis replication split brain
+            description: Redis replication ID-s are different.
+              This is expected during master failover but should not happen during
+              normal circumstances
