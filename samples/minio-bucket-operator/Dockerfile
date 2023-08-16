@@ -2,6 +2,7 @@ FROM python:alpine AS build
 RUN pip3 wheel --wheel-dir=/wheels \
    kubernetes-asyncio \
    passlib \
+   pyjwt \
    httpx-auth \
    httpx
 FROM minio/mc as minio

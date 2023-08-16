@@ -2,6 +2,9 @@
 import httpx
 import os
 import asyncio
+import jwt
+from base64 import b64encode
+from datetime import datetime, timedelta
 from httpx_auth import AWS4Auth
 from copy import deepcopy
 from operatorlib import \
@@ -10,8 +13,11 @@ from operatorlib import \
     PersistentVolumeClaimMixin, \
     PersistentMixin, \
     StatefulSetMixin, \
+    PodMonitorMixin, \
+    ServiceMonitorMixin, \
     PodSpecMixin, \
     ReplicasSpecMixin, \
+    CustomResourceMixin, \
     CapacityMixin, \
     ConsoleMixin, \
     HeadlessMixin, \
@@ -19,12 +25,17 @@ from operatorlib import \
     InstanceSecretMixin, \
     ClaimSecretMixin, \
     ClassedOperator
+from kubernetes_asyncio import client
+from kubernetes_asyncio.client.exceptions import ApiException
 
 
 class MinioBucketOperator(SharedMixin,
                           PersistentVolumeClaimMixin,
                           PersistentMixin,
                           StatefulSetMixin,
+                          ServiceMonitorMixin,
+                          PodMonitorMixin,
+                          CustomResourceMixin,
                           PodSpecMixin,
                           ReplicasSpecMixin,
                           CapacityMixin,
@@ -51,6 +62,34 @@ class MinioBucketOperator(SharedMixin,
     CONDITION_INSTANCE_USER_CREATED = "BucketUserCreated"
     CONDITION_INSTANCE_POLICY_CREATED = "BucketPolicyCreated"
     CONDITION_INSTANCE_POLICY_ATTACHED = "BucketPolicyAttached"
+    CONDITION_INSTANCE_PROMETHEUS_BEARER_TOKEN_GENERATED = "BucketMonitoringConfigured"
+
+    def get_monitor_secret(self):
+        return "%s-monitoring" % self.get_instance_secret_name()
+
+    def generate_service_monitor_spec(self):
+        spec = super().generate_service_monitor_spec()
+        spec["endpoints"] = [{
+            "targetPort": 9000,
+            "path": "/minio/v2/metrics/cluster",
+            "bearerTokenSecret": {
+                "name": self.get_monitor_secret(),
+                "key": "PROMETHEUS_BEARER_TOKEN"
+            }
+        }]
+        return spec
+
+    def generate_pod_monitor_spec(self):
+        spec = super().generate_pod_monitor_spec()
+        spec["podMetricsEndpoints"] = [{
+            "targetPort": 9000,
+            "path": "/minio/v2/metrics/node",
+            "bearerTokenSecret": {
+                "name": self.get_monitor_secret(),
+                "key": "PROMETHEUS_BEARER_TOKEN"
+            }
+        }]
+        return spec
 
     @classmethod
     def get_instance_condition_set(cls):
@@ -60,6 +99,7 @@ class MinioBucketOperator(SharedMixin,
             cls.CONDITION_INSTANCE_USER_CREATED,
             cls.CONDITION_INSTANCE_POLICY_CREATED,
             cls.CONDITION_INSTANCE_POLICY_ATTACHED,
+            cls.CONDITION_INSTANCE_PROMETHEUS_BEARER_TOKEN_GENERATED
         ]
 
     def get_bucket_name(self):
@@ -105,13 +145,6 @@ class MinioBucketOperator(SharedMixin,
 
     async def reconcile_instance(self):
         await super().reconcile_instance()
-
-        try:
-            self.get_instance_condition(self.CONDITION_INSTANCE_PROMETHEUS_BEARER_TOKEN_GENERATED)
-        except self.InstanceConditionNotSet:
-            pass
-        else:
-            return
 
         region = self.instance_secret.get("MINIO_REGION", "us-east-1")
         aws = AWS4Auth(
@@ -170,6 +203,43 @@ class MinioBucketOperator(SharedMixin,
         if exitcode != 0 and b"XMinioAdminPolicyChangeAlreadyApplied" not in stdout:
             raise ReconcileError("Failed to attach owner policy: %s" % (stdout or stderr))
         await self.set_instance_condition(self.CONDITION_INSTANCE_POLICY_ATTACHED)
+
+        # Generate Prometheus bearer token
+        token = jwt.encode(
+            payload={
+                "exp": (datetime.now() + timedelta(days=3650)).timestamp(),
+                "sub": self.instance_secret["MINIO_ROOT_USER"],
+                "iss": "prometheus",
+            },
+            key=self.instance_secret["MINIO_ROOT_PASSWORD"],
+            algorithm="HS512"
+        )
+
+        body = {
+            "metadata": {
+                "name": self.get_monitor_secret(),
+                "namespace": self.get_target_namespace(),
+                "ownerReferences": [self.get_instance_owner()]
+            },
+            "data": {
+                "PROMETHEUS_BEARER_TOKEN": b64encode(token.encode("ascii")).decode("ascii")
+            }
+        }
+
+        try:
+            await self.v1.create_namespaced_secret(
+                self.get_target_namespace(),
+                client.V1Secret(**body))
+        except ApiException as e:
+            if e.status == 409:
+                pass
+            else:
+                raise
+        else:
+            print("  Prometheus secret %s/%s created" % (
+                self.get_target_namespace(),
+                self.get_monitor_secret()))
+        await self.set_instance_condition(self.CONDITION_INSTANCE_PROMETHEUS_BEARER_TOKEN_GENERATED)
 
     async def invoke_minio_admin(self, *args):
         proc = await asyncio.create_subprocess_exec(

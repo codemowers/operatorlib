@@ -1464,8 +1464,8 @@ class ConsoleMixin():
             "metadata": {
                 "namespace": self.get_target_namespace(),
                 "name": self.get_console_service_name(),
-                "labels": self.labels,
-                "annotations": dict(self.get_annotations() + [("codemowers.cloud/mixin", "ConsoleMixin")]),
+                "labels": self.labels | {"codemowers.cloud/mixin": "ConsoleMixin"},
+                "annotations": dict(self.get_annotations()),
                 "ownerReferences": [self.get_instance_owner()],
             },
             "spec": self.generate_console_service()
@@ -1504,8 +1504,8 @@ class HeadlessMixin():
             "metadata": {
                 "namespace": self.get_target_namespace(),
                 "name": self.get_headless_service_name(),
-                "labels": self.labels,
-                "annotations": dict(self.get_annotations() + [("codemowers.cloud/mixin", "HeadlessMixin")]),
+                "labels": self.labels | {"codemowers.cloud/mixin": "HeadlessMixin"},
+                "annotations": dict(self.get_annotations()),
                 "ownerReferences": [self.get_instance_owner()],
             },
             "spec": self.generate_headless_service()
@@ -1550,8 +1550,8 @@ class ServiceMixin():
             "metadata": {
                 "namespace": self.get_target_namespace(),
                 "name": self.get_service_name(),
-                "labels": self.labels,
-                "annotations": dict(self.get_annotations() + [("codemowers.cloud/mixin", "ServiceMixin")]),
+                "labels": self.labels | {"codemowers.cloud/mixin": "ServiceMixin"},
+                "annotations": dict(self.get_annotations()),
                 "ownerReferences": [self.get_instance_owner()],
             },
             "spec": self.generate_service()
@@ -1625,9 +1625,10 @@ class PrimarySecondaryMixin():
             "metadata": {
                 "namespace": self.get_target_namespace(),
                 "name": self.get_primary_service_name(),
-                "labels": self.labels,
-                "annotations": dict(self.get_annotations() + [(
-                    "codemowers.cloud/mixin", "PrimarySecondaryMixin")]),
+                "labels": self.labels | {
+                    "codemowers.cloud/mixin": "PrimarySecondaryMixin",
+                    "codemowers.cloud/role": self.get_primary_role_name()},
+                "annotations": dict(self.get_annotations()),
                 "ownerReferences": [self.get_instance_owner()],
             },
             "spec": self.generate_primary_service()
@@ -1637,9 +1638,10 @@ class PrimarySecondaryMixin():
             "metadata": {
                 "namespace": self.get_target_namespace(),
                 "name": self.get_secondary_service_name(),
-                "labels": self.labels,
-                "annotations": dict(self.get_annotations() + [(
-                    "codemowers.cloud/mixin", "PrimarySecondaryMixin")]),
+                "labels": self.labels | {
+                    "codemowers.cloud/mixin": "PrimarySecondaryMixin",
+                    "codemowers.cloud/role": self.get_secondary_role_name()},
+                "annotations": dict(self.get_annotations()),
                 "ownerReferences": [self.get_instance_owner()],
             },
             "spec": self.generate_secondary_service()
@@ -1853,8 +1855,8 @@ class PersistentVolumeClaimMixin():
                                 self.get_persistent_volume_claim_name(),
                                 self.get_target_name(),
                                 j),
-                            "labels": self.labels,
-                            "annotations": dict(self.get_annotations() + [("codemowers.cloud/mixin", "PersistentVolumeClaimMixin")]),
+                            "labels": self.labels | {"codemowers.cloud/mixin": "PersistentVolumeClaimMixin"},
+                            "annotations": dict(self.get_annotations()),
                             "ownerReferences": [self.get_instance_owner()],
                         },
                         "spec": {
@@ -2114,7 +2116,7 @@ class StatefulSetMixin():
         Generate StatefulSet, PersistentVolumeClaim, PodDisruptionBudget manifests
         """
         manifests = super().generate_manifests()
-        annotations = dict(self.get_annotations() + [("codemowers.cloud/mixin", "StatefulSetMixin")])
+        annotations = dict(self.get_annotations())
 
         if self.class_spec.get("podSpec"):
             stateful_set_spec = self.generate_stateful_set_manifest()
@@ -2197,7 +2199,7 @@ class StatefulSetMixin():
                 "metadata": {
                     "namespace": self.get_target_namespace(),
                     "name": self.get_target_name(),
-                    "labels": self.labels,
+                    "labels": self.labels | {"codemowers.cloud/mixin": "StatefulSetMixin"},
                     "annotations": annotations,
                     "ownerReferences": [self.get_instance_owner()],
                 },
@@ -2394,8 +2396,8 @@ class PodMonitorMixin:
             "metadata": {
                 "namespace": self.get_target_namespace(),
                 "name": self.get_target_name(),
-                "labels": self.labels,
-                "annotations": dict(self.get_annotations() + [("codemowers.cloud/mixin", "PodMonitorMixin")]),
+                "labels": self.labels | {"codemowers.cloud/mixin": "PodMonitorMixin"},
+                "annotations": dict(self.get_annotations()),
                 "ownerReferences": [self.get_instance_owner()],
             },
             "spec": self.generate_pod_monitor_spec()
@@ -2410,7 +2412,7 @@ class ServiceMonitorMixin:
     def generate_service_monitor_spec(self):
         return {
             "selector": {
-                "matchLabels": self.labels
+                "matchLabels": self.labels | {"codemowers.cloud/mixin": "ServiceMixin"},
             }
         }
 
@@ -2421,8 +2423,8 @@ class ServiceMonitorMixin:
             "metadata": {
                 "namespace": self.get_target_namespace(),
                 "name": self.get_target_name(),
-                "labels": self.labels,
-                "annotations": dict(self.get_annotations() + [("codemowers.cloud/mixin", "ServiceMonitorMixin")]),
+                "labels": self.labels | {"codemowers.cloud/mixin": "ServiceMonitorMixin"},
+                "annotations": dict(self.get_annotations()),
                 "ownerReferences": [self.get_instance_owner()],
             },
             "spec": self.generate_service_monitor_spec()
