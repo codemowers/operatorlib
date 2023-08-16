@@ -8,7 +8,7 @@ spec:
     - name: redis-operator
       rules:
         - alert: RedisReplicationSplitBrain
-          expr: count by (exported_instance) (sum by (id, exported_instance) (redis_replication_info)) > 1
+          expr: count by (exported_instance) (sum by (id, exported_instance) (redis_replication_info{namespace="redis-clusters"})) > 1
           for: 2m
           labels:
             severity: critical
