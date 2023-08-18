@@ -2108,18 +2108,20 @@ class StatefulSetMixin():
             self.get_target_namespace()) for j in self.get_pod_names()]
 
     async def generate_pod_metrics(self, pod_name):
-        return
+        if False:
+            yield
 
     async def generate_instance_metrics(self):
         async for descriptor, value, labels in super().generate_instance_metrics():
             yield descriptor, value, labels
-        for pod_name in self.get_pod_names():
-            try:
-                async for descriptor, value, labels in self.generate_pod_metrics(pod_name):
-                    yield descriptor, value, [pod_name] + labels
-            except Exception as e:
-                print("Uncaught exception while scraping pod %s metrics: %s" % (
-                    pod_name, e))
+        if self.class_spec.get("podSpec"):
+            for pod_name in self.get_pod_names():
+                try:
+                    async for descriptor, value, labels in self.generate_pod_metrics(pod_name):
+                        yield descriptor, value, [pod_name] + labels
+                except Exception as e:
+                    print("Uncaught exception while scraping pod %s metrics: %s" % (
+                        pod_name, e))
 
     def generate_manifests(self):
         """
