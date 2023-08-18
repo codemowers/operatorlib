@@ -2,10 +2,10 @@
 from base64 import b64encode
 from kubernetes_asyncio import client
 from kubernetes_asyncio.client.exceptions import ApiException
-from operatorlib import ClaimSecretMixin, ClaimMixin, Operator
+from operatorlib import ClaimSecretMixin, ClaimMixin, MonitoringMixin, Operator
 
 
-class SecretClaimOperator(ClaimSecretMixin, ClaimMixin, Operator):
+class SecretClaimOperator(ClaimSecretMixin, ClaimMixin, MonitoringMixin, Operator):
     OPERATOR = "secret-claim-operator"
     GROUP = "codemowers.cloud"
     VERSION = "v1beta1"

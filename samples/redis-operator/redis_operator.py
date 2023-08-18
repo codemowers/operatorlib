@@ -10,7 +10,7 @@ from operatorlib import UpstreamMixin, InstanceSecretMixin, \
     PersistentVolumeClaimMixin, PersistentMixin, CapacityMixin, \
     ClusterManagementMixin, PrimarySecondaryMixin, StatefulSetMixin, \
     PodSpecMixin, ReplicasSpecMixin, HeadlessMixin, ServiceMixin, \
-    ClassedOperator, MonitoringMixin, ClaimSecretMixin, InstanceTaskMixin
+    ClassedOperator, ClaimSecretMixin, InstanceTaskMixin
 
 
 class RedisBase(InstanceTaskMixin,
@@ -22,7 +22,6 @@ class RedisBase(InstanceTaskMixin,
                 CapacityMixin,
                 ClusterManagementMixin,
                 PrimarySecondaryMixin,
-                MonitoringMixin,
                 StatefulSetMixin,
                 PodSpecMixin,
                 ReplicasSpecMixin,

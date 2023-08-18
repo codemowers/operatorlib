@@ -324,12 +324,8 @@ class Operator():
         """
         Base Operator metrics
         """
-        yield cls.METRIC_OPERATOR_INSTANCE_RECONCILE_LOOP_RESTART_COUNT, \
-            cls._counter_instance_reconcile_loop_restart_count, \
-            (cls.GROUP, cls.SINGULAR, cls.VERSION)
-        yield cls.METRIC_OPERATOR_INSTANCE_RECONCILE_COUNT, \
-            cls._counter_instance_reconcile_count, \
-            (cls.GROUP, cls.SINGULAR, cls.VERSION)
+        if False:
+            yield
 
     @classmethod
     async def _run(cls):
@@ -396,6 +392,20 @@ class InstanceMixin():
     INSTANCE_STATE_ERROR = "Error"
     INSTANCE_STATE_BOUND = "Bound"
     INSTANCE_STATE_RELEASED = "Released"
+
+    @classmethod
+    async def generate_operator_metrics(cls):
+        """
+        Base Operator metrics
+        """
+        async for descriptor, value, labels in super().generate_operator_metrics():
+            yield descriptor, value, labels
+        yield cls.METRIC_OPERATOR_INSTANCE_RECONCILE_LOOP_RESTART_COUNT, \
+            cls._counter_instance_reconcile_loop_restart_count, \
+            (cls.GROUP, cls.SINGULAR, cls.VERSION)
+        yield cls.METRIC_OPERATOR_INSTANCE_RECONCILE_COUNT, \
+            cls._counter_instance_reconcile_count, \
+            (cls.GROUP, cls.SINGULAR, cls.VERSION)
 
     class InstanceConditionNotSet(Exception):
         pass
@@ -1027,10 +1037,10 @@ class ClaimMixin():
             yield descriptor, value, labels
         yield cls.METRIC_OPERATOR_CLAIM_RECONCILE_LOOP_RESTART_COUNT,  \
             cls._counter_claim_reconcile_loop_restart_count, \
-            (cls.GROUP, cls.SINGULAR, cls.VERSION)
+            (cls.GROUP, cls.get_claim_singular(), cls.VERSION)
         yield cls.METRIC_OPERATOR_CLAIM_RECONCILE_COUNT, \
             cls._counter_claim_reconcile_count, \
-            (cls.GROUP, cls.SINGULAR, cls.VERSION)
+            (cls.GROUP, cls.get_claim_singular(), cls.VERSION)
 
     @classmethod
     def generate_operator_cluster_role_rules(cls):
@@ -2579,7 +2589,7 @@ class InstanceClaimMixin():
         ]
 
 
-class ClassedOperator(InstanceClaimMixin, InstanceMixin, ClaimMixin, Operator):
+class ClassedOperator(InstanceClaimMixin, InstanceMixin, ClaimMixin, MonitoringMixin, Operator):
     """
     Operator subclass for building resource class based operators
 
