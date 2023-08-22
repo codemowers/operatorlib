@@ -1,0 +1,40 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: codemowers-io-wildduck-operator
+rules:
+  - apiGroups:
+      - codemowers.io
+    resources:
+      - oidcgatewayusers
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - codemowers.io
+    resources:
+      - oidcgatewayusers/status
+    verbs:
+      - patch
+      - update
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: codemowers-io-wildduck-operator
+  namespace: wildduck
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: codemowers-io-wildduck-operator
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: codemowers-io-wildduck-operator
+subjects:
+  - kind: ServiceAccount
+    name: codemowers-io-wildduck-operator
+    namespace: wildduck

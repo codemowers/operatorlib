@@ -106,3 +106,21 @@ deploy:
 manifests:
   rawYaml:
     - samples/secret-claim-operator/templates/secret-claim-operator-deployment.yaml
+---
+apiVersion: skaffold/v3
+kind: Config
+metadata:
+  name: wildduck-operator
+build:
+  artifacts:
+    - docker:
+        dockerfile: samples/wildduck-operator/Dockerfile
+      image: docker.io/codemowers/wildduck-operator
+deploy:
+  kubectl:
+    flags:
+      global:
+        - --namespace=wildduck
+manifests:
+  rawYaml:
+    - samples/wildduck-operator/templates/wildduck-operator-deployment.yaml

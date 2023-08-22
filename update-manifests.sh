@@ -15,7 +15,8 @@ spec:
   sourceRepos:
     - '*'
 EOF
-for j in secret-claim-operator redis-operator keydb-operator minio-bucket-operator mysql-database-operator postgres-database-operator; do
+for i in secret-claim redis keydb minio-bucket mysql-database postgres-database wildduck; do
+    j=$i-operator
     echo "Updating $j"
     p=samples/$j/templates
     mkdir -p $p
@@ -76,3 +77,6 @@ cat skaffold-* > skaffold.yaml
 
 
 cat samples/*/test/* > test.yaml
+# TODO: Cleaner way to disable CRD generation
+rm -fv samples/wildduck-operator/templates/wildduck-operator-deployment.yaml
+rm -fv samples/wildduck-operator/templates/wildduck-operator-crds.yaml
