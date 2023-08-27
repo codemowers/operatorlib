@@ -24,18 +24,20 @@ class WildduckOperator(ClaimMixin, Operator):
     @classmethod
     async def reconcile_claim(cls, api_client, co, body):
         username = body["metadata"]["name"]
-        if body["spec"]["type"] != "person":
-            print("  Skipping non-person user:", username)
-            return
 
         # TODO: Cleaner env var handling
         WILDDUCK_API_TOKEN = os.environ["WILDDUCK_API_TOKEN"]
         WILDDUCK_API_URL = os.environ["WILDDUCK_API_URL"]
         MANAGED_DOMAIN = os.environ["MANAGED_DOMAIN"]
         ALLOWED_GROUPS = os.environ["ALLOWED_GROUPS"].split(",")
+        ACCOUNT_TYPES = os.getenv("ACCOUNT_TYPES", "person,service").split(",")
         QUOTA = int(os.environ.get("QUOTA", 15 * 2**30))
         SPAM_LEVEL = int(os.environ.get("SPAM_LEVEL", "25"))
         HEADERS = {"X-Access-Token": WILDDUCK_API_TOKEN}
+
+        if body["spec"]["type"] not in ACCOUNT_TYPES:
+            print("  Skipping user %s of unexpected type %s", username, body["spec"]["type"])
+            return
 
         forwarding = {}
         display_name = {}
@@ -88,18 +90,18 @@ class WildduckOperator(ClaimMixin, Operator):
                     pass
                 else:
                     raise ReconcileError("Wildduck API returned %d (%s) while creating user %s: %s" % (
-                        resp.status, code, username, u))
+                        resp.status, code, username, await resp.json()))
             elif resp.status != 200:
                 raise ReconcileError("Wildduck API returned %d while creating user %s: %s" % (
-                    resp.status, username, u))
+                    resp.status, username, await resp.json()))
 
             resp = await session.get(
                 "%s/users/resolve/%s" % (WILDDUCK_API_URL, username),
                 headers=HEADERS)
 
             if resp.status != 200:
-                raise ReconcileError("Wildduck API returned %d while looking up user %s" % (
-                    resp.status, username))
+                raise ReconcileError("Wildduck API returned %d while looking up user %s: %s" % (
+                    resp.status, username, await resp.json()))
 
             identifier = (await resp.json())["id"]
 
