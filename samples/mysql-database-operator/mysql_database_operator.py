@@ -211,11 +211,11 @@ class MysqlDatabaseOperator(SharedMixin,
         return d
 
     def generate_custom_resources(self):
-        if not self.class_spec["podSpec"]:
+        if "podSpec" not in self.class_spec:
             return []
-        if not self.class_spec["storageClass"]:
+        if "replicas" not in self.class_spec:
             return []
-        if not self.class_spec["replicas"]:
+        if "storageClass" not in self.class_spec:
             return []
 
         if "mariadb" in self.class_spec["podSpec"]["containers"][0]["image"]:
