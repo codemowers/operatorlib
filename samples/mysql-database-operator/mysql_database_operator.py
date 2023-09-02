@@ -131,14 +131,53 @@ class MysqlDatabaseOperator(SharedMixin,
                 self.claim_secret["MYSQL_USER"]))
             await cur.execute("FLUSH PRIVILEGES")
             await self.set_instance_condition(self.CONDITION_INSTANCE_PRIVILEGES_GRANTED)
-        except aiomysql.OperationalError:
-            raise ReconcileError("Failed to connect to MySQL server at %s" %
-                self.instance_secret["MYSQL_HOST"])
+        except aiomysql.OperationalError as e:
+            raise ReconcileError("Failed to connect to MySQL server at %s: %s" %
+                (self.instance_secret["MYSQL_HOST"], e))
 
     @classmethod
     def generate_operator_cluster_role_rules(cls):
         yield from super().generate_operator_cluster_role_rules()
         yield "mariadb.mmontes.io", "mariadbs", ("create", "delete", "patch")
+
+    def generate_mariadb_spec(self):
+        cnt = self.class_spec["podSpec"]["containers"][0]
+        i, t = cnt["image"].split(":", 1)
+        d = {
+            "image": {
+                "repository": i,
+                "tag": t,
+                "pullPolicy": cnt["imagePullPolicy"],
+            },
+            "rootPasswordSecretKeyRef": {
+                "name": self.get_instance_secret_name(),
+                "key": "MYSQL_PWD",
+            },
+            "replicas": self.class_spec["replicas"],
+
+            "volumeClaimTemplate": {
+                "storageClassName": self.class_spec.get("storageClass"),
+                "accessModes": ["ReadWriteOnce"],
+                "resources": {
+                    "requests": {
+                        "storage": self.get_capacity(),
+                    }
+                }
+            },
+            "affinity": {
+                "podAntiAffinity": {
+                    "requiredDuringSchedulingIgnoredDuringExecution": [{
+                        "labelSelector": self.label_selector,
+                        "topologyKey": self.get_pod_topology_key(),
+                    }]
+                }
+            }
+        }
+
+        if self.class_spec["replicas"] > 1:
+            d["replication"] = { "enabled": True }
+            d["podDisruptionBudget"] = { "maxUnavailable": 1 }
+        return d
 
     def generate_custom_resources(self):
         if not self.class_spec["podSpec"]:
@@ -148,9 +187,7 @@ class MysqlDatabaseOperator(SharedMixin,
         if not self.class_spec["replicas"]:
             return []
 
-        cnt = self.class_spec["podSpec"]["containers"][0]
-        i, t = cnt["image"].split(":", 1)
-        if "mariadb" in i:
+        if "mariadb" in self.class_spec["podSpec"]["containers"][0]["image"]:
             return [{
                 "apiVersion": "mariadb.mmontes.io/v1alpha1",
                 "kind": "MariaDB",
@@ -159,38 +196,7 @@ class MysqlDatabaseOperator(SharedMixin,
                     "name": self.get_target_name(),
                     "ownerReferences": [self.get_instance_owner()],
                 },
-                "spec": {
-                    "image": {
-                        "repository": i,
-                        "tag": t,
-                        "pullPolicy": cnt["imagePullPolicy"],
-                    },
-                    "rootPasswordSecretKeyRef": {
-                        "name": self.get_instance_secret_name(),
-                        "key": "MYSQL_PWD",
-                    },
-                    "replicas": self.class_spec["replicas"],
-                    "podDisruptionBudget": {
-                        "maxUnavailable": 1,
-                    },
-                    "volumeClaimTemplate": {
-                        "storageClassName": self.class_spec.get("storageClass"),
-                        "accessModes": ["ReadWriteOnce"],
-                        "resources": {
-                            "requests": {
-                                "storage": self.get_capacity(),
-                            }
-                        }
-                    },
-                    "affinity": {
-                        "podAntiAffinity": {
-                            "requiredDuringSchedulingIgnoredDuringExecution": [{
-                                "labelSelector": self.label_selector,
-                                "topologyKey": self.get_pod_topology_key(),
-                            }]
-                        }
-                    },
-                }
+                "spec": self.generate_mariadb_spec()
             }]
         else:
             raise NotImplementedError("Don't know how to handle image:", i)
