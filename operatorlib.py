@@ -1478,7 +1478,7 @@ class ConsoleMixin():
                 "annotations": dict(self.get_annotations()),
                 "ownerReferences": [self.get_instance_owner()],
             },
-            "spec": self.generate_console_service()
+            "spec": self.generate_console_service() | self.generate_common_service()
         }] if self.class_spec.get("podSpec") else [])
 
 
@@ -1518,7 +1518,7 @@ class HeadlessMixin():
                 "annotations": dict(self.get_annotations()),
                 "ownerReferences": [self.get_instance_owner()],
             },
-            "spec": self.generate_headless_service()
+            "spec": self.generate_headless_service() | self.generate_common_service()
         }] if self.class_spec.get("podSpec") else [])
 
 
@@ -1553,6 +1553,15 @@ class ServiceMixin():
             "ports": self.generate_service_ports()
         }
 
+    def generate_common_service(self):
+        ip_families = list(sorted([j for j in os.getenv("IP_FAMILIES", "").split(",") if j]))
+        d = {
+            "ipFamilyPolicy": os.getenv("IP_FAMILY_POLICY", "PreferDualStack")
+        }
+        if ip_families:
+            d["ipFamilies"] = ip_families
+        return d
+
     def generate_manifests(self):
         return super().generate_manifests() + ([{
             "kind": "Service",
@@ -1564,7 +1573,7 @@ class ServiceMixin():
                 "annotations": dict(self.get_annotations()),
                 "ownerReferences": [self.get_instance_owner()],
             },
-            "spec": self.generate_service()
+            "spec": self.generate_service() | self.generate_common_service()
         }] if self.class_spec.get("podSpec") else [])
 
 
@@ -1641,7 +1650,7 @@ class PrimarySecondaryMixin():
                 "annotations": dict(self.get_annotations()),
                 "ownerReferences": [self.get_instance_owner()],
             },
-            "spec": self.generate_primary_service()
+            "spec": self.generate_primary_service() | self.generate_common_service()
         }, {
             "kind": "Service",
             "apiVersion": "v1",
@@ -1654,7 +1663,7 @@ class PrimarySecondaryMixin():
                 "annotations": dict(self.get_annotations()),
                 "ownerReferences": [self.get_instance_owner()],
             },
-            "spec": self.generate_secondary_service()
+            "spec": self.generate_secondary_service() | self.generate_common_service()
         }] if self.class_spec.get("podSpec") else [])
 
 
