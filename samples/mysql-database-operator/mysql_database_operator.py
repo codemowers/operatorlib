@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 import aiomysql
+from kubernetes_asyncio import client
+from kubernetes_asyncio.client.exceptions import ApiException
 from operatorlib import \
     ReconcileError, \
     CustomResourceMixin, \
@@ -51,6 +53,8 @@ class MysqlDatabaseOperator(SharedMixin,
         "CREATE TEMPORARY TABLES"
     )
 
+    _phpmyadmin_connections = set()
+
     @classmethod
     def get_instance_condition_set(cls):
         return super().get_instance_condition_set() + [
@@ -77,7 +81,7 @@ class MysqlDatabaseOperator(SharedMixin,
 
     async def generate_instance_secret(self):
         pwd = self.generate_random_string(32)
-        yield "MYSQL_HOST", "%s.%s.svc" % (
+        yield "MYSQL_HOST", "primary-%s.%s.svc" % (
             self.get_target_name(), self.get_target_namespace())
         yield "MYSQL_TCP_PORT", "3306"
         yield "MYSQL_PWD", pwd
@@ -135,10 +139,37 @@ class MysqlDatabaseOperator(SharedMixin,
             raise ReconcileError("Failed to connect to MySQL server at %s: %s" %
                 (self.instance_secret["MYSQL_HOST"], e))
 
+        self._phpmyadmin_connections.add(self.instance_secret["MYSQL_HOST"])
+        connections = [(h, 3306) for h in sorted(self._phpmyadmin_connections)]
+
+        body = {
+            "metadata": {
+                "name": "phpmyadmin-connections",
+                "namespace": self.get_target_namespace(),
+            },
+            "data": {
+                "PMA_HOSTS": ",".join([h for h, p in connections]),
+                "PMA_PORTS": ",".join([str(p) for h, p in connections])
+            }
+        }
+        try:
+            await self.v1.replace_namespaced_config_map(
+                body["metadata"]["name"],
+                body["metadata"]["namespace"],
+                client.V1ConfigMap(**body))
+        except ApiException as e:
+            if e.status == 404:
+                await self.v1.create_namespaced_config_map(
+                    body["metadata"]["namespace"],
+                    client.V1ConfigMap(**body))
+            else:
+                raise
+
     @classmethod
     def generate_operator_cluster_role_rules(cls):
         yield from super().generate_operator_cluster_role_rules()
         yield "mariadb.mmontes.io", "mariadbs", ("create", "delete", "patch")
+        yield "", "configmaps", ("update", "create")
 
     def generate_mariadb_spec(self):
         cnt = self.class_spec["podSpec"]["containers"][0]
