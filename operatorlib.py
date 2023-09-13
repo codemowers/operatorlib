@@ -1228,28 +1228,6 @@ class ClaimMixin():
         ]
 
     @classmethod
-    async def cleanup_claim(cls, api_client, co, body):
-        # Remove claimRef from instance
-        instance_name = cls.generate_instance_name(body)
-        await co.patch_cluster_custom_object(
-            cls.GROUP, cls.VERSION,
-            cls.PLURAL.lower(), instance_name, [{
-                "op": "remove",
-                "path": "/spec/claimRef/uid"}])
-        await co.patch_cluster_custom_object_status(
-            cls.GROUP, cls.VERSION,
-            cls.PLURAL.lower(), instance_name, [{
-                "op": "replace",
-                "path": "/status/phase",
-                "value": cls.INSTANCE_STATE_RELEASED
-            }])
-
-        print("Deleted %s %s/%s" % (
-            cls.get_claim_singular(),
-            body["metadata"]["namespace"],
-            body["metadata"]["name"]))
-
-    @classmethod
     async def run_claim_reconciler_loop(cls, api_client, co, args):
         """
         Claim reconciler loop
@@ -2588,6 +2566,28 @@ class InstanceClaimMixin():
                         self.spec["claimRef"]["name"]))
                 else:
                     raise
+
+    @classmethod
+    async def cleanup_claim(cls, api_client, co, body):
+        # Remove claimRef from instance
+        instance_name = cls.generate_instance_name(body)
+        await co.patch_cluster_custom_object(
+            cls.GROUP, cls.VERSION,
+            cls.PLURAL.lower(), instance_name, [{
+                "op": "remove",
+                "path": "/spec/claimRef/uid"}])
+        await co.patch_cluster_custom_object_status(
+            cls.GROUP, cls.VERSION,
+            cls.PLURAL.lower(), instance_name, [{
+                "op": "replace",
+                "path": "/status/phase",
+                "value": cls.INSTANCE_STATE_RELEASED
+            }])
+
+        print("Deleted %s %s/%s" % (
+            cls.get_claim_singular(),
+            body["metadata"]["namespace"],
+            body["metadata"]["name"]))
 
     @classmethod
     async def reconcile_claim(cls, api_client, co, body):
