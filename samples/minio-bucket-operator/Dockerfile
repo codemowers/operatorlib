@@ -14,7 +14,7 @@ LABEL name="codemowers/minio-operator" \
       version="rc" \
       maintainer="Lauri Võsandi <lauri@codemowers.io>"
 ENV PYTHONUNBUFFERED=1
-ENTRYPOINT /app/minio_bucket_operator.py run
+ENTRYPOINT python3 /app/minio_bucket_operator.py run
 ADD operatorlib.py /app/
 ADD samples/minio-bucket-operator/minio-owner.json /app/
 ADD samples/minio-bucket-operator/minio_bucket_operator.py /app/

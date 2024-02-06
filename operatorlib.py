@@ -614,6 +614,13 @@ class InstanceMixin():
                     manifest["metadata"]["namespace"],
                     manifest,
                     _preload_content=False)
+                status = await resp.json()
+                if status["kind"] == "Status" and status["status"] == "Failure":
+                    print("  Failed to create %s %s/%s",
+                          manifest["kind"],
+                          manifest["metadata"]["namespace"],
+                          manifest["metadata"]["name"],
+                          "because:", status["message"])
             else:
                 print("  Patching %s %s/%s" % (manifest["kind"], manifest["metadata"]["namespace"], manifest["metadata"]["name"]))
                 resp = await getattr(k8s_api, "patch_namespaced_{0}".format(kind))(
@@ -1575,6 +1582,62 @@ class ServiceMixin():
             },
             "spec": self.generate_service() | self.generate_common_service()
         }] if self.class_spec.get("podSpec") else [])
+
+
+class IngressMixin():
+    """
+    Mixin for handling Ingress resource
+    """
+    @classmethod
+    def generate_operator_cluster_role_rules(cls):
+        yield from super().generate_operator_cluster_role_rules()
+        yield "networking.k8s.io", "ingresses", ("get", "create", "patch")
+
+    def get_ingress_host(self):
+        return self.class_spec.get("ingressSpec").get("host") % (self.get_target_name())
+
+    def generate_ingress(self):
+        """
+        Generate Kubernetes Ingress specification
+        """
+        return {
+            "rules": [
+                {
+                    "host": self.get_ingress_host(),
+                    "http": {
+                        "paths": [
+                            {
+                                "pathType": "Prefix",
+                                "path": "/",
+                                "backend": {
+                                    "service": {
+                                        "name": self.get_service_name(),
+                                        "port": {
+                                            "name": "http"
+                                        }
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                }
+            ],
+            "tls": self.class_spec.get("ingressSpec").get("tls") if self.class_spec.get("ingressSpec").get("tls") else []
+        }
+
+    def generate_manifests(self):
+        return super().generate_manifests() + ([{
+            "kind": "Ingress",
+            "apiVersion": "networking.k8s.io/v1",
+            "metadata": {
+                "namespace": self.get_target_namespace(),
+                "name": self.get_service_name(),
+                "labels": self.labels,
+                "annotations": self.class_spec.get("ingressSpec").get("annotations") if self.class_spec.get("ingressSpec").get("annotations") else {},
+                "ownerReferences": [self.get_instance_owner()],
+            },
+            "spec": self.generate_ingress(),
+        }] if self.class_spec.get("ingressSpec") else [])
 
 
 class PrimarySecondaryMixin():
