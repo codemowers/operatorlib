@@ -614,6 +614,13 @@ class InstanceMixin():
                     manifest["metadata"]["namespace"],
                     manifest,
                     _preload_content=False)
+                status = await resp.json()
+                if status["kind"] == "Status" and status["status"] == "Failure":
+                    print("  Failed to create %s %s/%s",
+                          manifest["kind"],
+                          manifest["metadata"]["namespace"],
+                          manifest["metadata"]["name"],
+                          "because:", status["message"])
             else:
                 print("  Patching %s %s/%s" % (manifest["kind"], manifest["metadata"]["namespace"], manifest["metadata"]["name"]))
                 resp = await getattr(k8s_api, "patch_namespaced_{0}".format(kind))(
