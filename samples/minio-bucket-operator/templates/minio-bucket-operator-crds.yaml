@@ -246,6 +246,31 @@ spec:
                         type: object
                       type: array
                   type: object
+                ingressSpec:
+                  properties:
+                    host:
+                      type: string
+                    ingressClassName:
+                      type: string
+                    annotations:
+                      type: object
+                      x-kubernetes-embedded-resource: false
+                      x-kubernetes-preserve-unknown-fields: true
+                    tls:
+                      items:
+                        properties:
+                          hosts:
+                            type: array
+                            items:
+                              default: ""
+                              type: string
+                          secretName:
+                            type: string
+                        type: object
+                      type: array
+                  required:
+                    - host
+                  type: object
                 reclaimPolicy:
                   enum:
                     - Retain

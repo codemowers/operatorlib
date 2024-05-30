@@ -22,6 +22,7 @@ from operatorlib import \
     ConsoleMixin, \
     HeadlessMixin, \
     ServiceMixin, \
+    IngressMixin, \
     InstanceSecretMixin, \
     ClaimSecretMixin, \
     ClassedOperator
@@ -42,6 +43,7 @@ class MinioBucketOperator(SharedMixin,
                           ConsoleMixin,
                           HeadlessMixin,
                           ServiceMixin,
+                          IngressMixin,
                           InstanceSecretMixin,
                           ClaimSecretMixin,
                           ClassedOperator):
@@ -109,7 +111,7 @@ class MinioBucketOperator(SharedMixin,
         return "%s-%s" % (self.spec["claimRef"]["namespace"], self.uid)
 
     def get_s3_endpoint_url(self):
-        return self.instance_secret.get(
+        return "https://%s" % self.get_ingress_host() if self.class_spec.get("ingressSpec") else self.instance_secret.get(
             "AWS_S3_ENDPOINT_URL", "http://%s" % self.get_service_fqdn())
 
     def get_minio_admin_uri(self):
