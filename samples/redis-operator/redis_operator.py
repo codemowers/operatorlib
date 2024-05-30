@@ -109,6 +109,8 @@ class RedisBase(InstanceTaskMixin,
                 redis_info["connected_clients"], []
             yield self.METRIC_REDIS_MEMORY_USAGE, \
                 redis_info["used_memory"], []
+            yield self.METRIC_REDIS_MEMORY_MAX, \
+                redis_info["maxmemory"], []
             yield self.METRIC_REDIS_REPL_BACKLOG_HISTLEN, \
                 redis_info["repl_backlog_histlen"], \
                 [redis_info["role"]]
@@ -142,6 +144,10 @@ class RedisBase(InstanceTaskMixin,
     METRIC_REDIS_MEMORY_USAGE = \
         "redis_memory_used_bytes", \
         "Redis memory usage", \
+        ["instance", "pod"]
+    METRIC_REDIS_MEMORY_MAX = \
+        "redis_memory_max_bytes", \
+        "Redis memory max bytes", \
         ["instance", "pod"]
     METRIC_REDIS_INSTANCE_INFO = \
         "redis_info", \
