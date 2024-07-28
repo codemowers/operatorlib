@@ -6,8 +6,8 @@ import os
 
 class WildduckOperator(ClaimMixin, Operator):
     OPERATOR = "wildduck-operator"
-    GROUP = "codemowers.io"
-    VERSION = "v1alpha1"
+    GROUP = "codemowers.cloud"
+    VERSION = "v1beta1"
 
     @classmethod
     def get_operator_namespace(cls):
