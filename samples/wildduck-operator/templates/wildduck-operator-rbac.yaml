@@ -5,17 +5,17 @@ metadata:
   name: codemowers-io-wildduck-operator
 rules:
   - apiGroups:
-      - codemowers.io
+      - codemowers.cloud
     resources:
-      - oidcgatewayusers
+      - oidcusers
     verbs:
       - get
       - list
       - watch
   - apiGroups:
-      - codemowers.io
+      - codemowers.cloud
     resources:
-      - oidcgatewayusers/status
+      - oidcusers/status
     verbs:
       - patch
       - update

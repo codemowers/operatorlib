@@ -15,11 +15,11 @@ class WildduckOperator(ClaimMixin, Operator):
 
     @classmethod
     def get_claim_singular(cls):
-        return "OIDCGatewayUser"
+        return "OIDCUser"
 
     @classmethod
     def get_claim_plural(cls):
-        return "OIDCGatewayUsers"
+        return "OIDCUsers"
 
     @classmethod
     async def reconcile_claim(cls, api_client, co, body):
@@ -48,13 +48,13 @@ class WildduckOperator(ClaimMixin, Operator):
 
         # Determine forwarding address outside organization
         # TODO: Have this in status subresource
-        if "email" in body["spec"]:
+        if "primaryEmail" in body["status"]:
             forwarding = {"targets": [body["spec"]["email"]]}
-        elif "githubEmails" in body["spec"]:
-            for j in body["spec"]["githubEmails"]:
+        elif "emails" in body["github"]:
+            for j in body["emails"]["github"]:
                 forwarding = {"targets": [j["email"]]}
                 break
-            for j in body["spec"]["githubEmails"]:
+            for j in body["emails"]["github"]:
                 if j["primary"]:
                     forwarding = {"targets": [j["email"]]}
                     break
