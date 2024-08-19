@@ -3,7 +3,7 @@ from base64 import b64encode
 from kubernetes_asyncio import client
 from kubernetes_asyncio.client.exceptions import ApiException
 from operatorlib import ClaimSecretMixin, ClaimMixin, MonitoringMixin, Operator
-
+from passlib.hash import bcrypt
 
 class SecretClaimOperator(ClaimSecretMixin, ClaimMixin, MonitoringMixin, Operator):
     OPERATOR = "secret-claim-operator"
@@ -50,6 +50,7 @@ class SecretClaimOperator(ClaimSecretMixin, ClaimMixin, MonitoringMixin, Operato
         ctx = {
             "plaintext": cls.generate_random_string(body["spec"]["size"])
         }
+        ctx["bcrypt"] = bcrypt.hash(ctx["plaintext"]) # TODO: Use lazy getter
         d = {}
         for o in body["spec"]["mapping"]:
             d[o["key"]] = b64encode((o["value"] % ctx).encode("ascii")).decode("ascii")
