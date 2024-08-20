@@ -1014,6 +1014,12 @@ class ClaimMixin():
         ["group", "kind", "version"]
 
     @classmethod
+    def cleanup_claim(cls, *args, **kwargs):
+        # Owner reference will cause Kubernetes itself to
+        # clean up generated resources but you can add custom logic here
+        pass
+
+    @classmethod
     def generate_nuke_command(cls):
         yield from super().generate_nuke_command()
         yield "kubectl delete --all=true --all-namespaces %s.%s" % (
