@@ -16,7 +16,7 @@ spec:
         app: redis-operator
     spec:
       containers:
-        - image: docker.io/codemowers/redis-operator:latest
+        - image: mirror.gcr.io/codemowers/redis-operator:latest
           name: redis-operator
           ports:
             - containerPort: 8000

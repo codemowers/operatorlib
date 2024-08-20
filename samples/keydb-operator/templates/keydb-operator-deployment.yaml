@@ -16,7 +16,7 @@ spec:
         app: keydb-operator
     spec:
       containers:
-        - image: docker.io/codemowers/keydb-operator:latest
+        - image: mirror.gcr.io/codemowers/keydb-operator:latest
           name: keydb-operator
           ports:
             - containerPort: 8000

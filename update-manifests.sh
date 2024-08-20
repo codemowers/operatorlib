@@ -23,7 +23,7 @@ for i in secret-claim redis keydb minio-bucket mysql-database postgres-database 
     python3 samples/$j/$(echo $j | tr "-" "_").py nuke >> nuke-all.sh
     python3 samples/$j/$(echo $j | tr "-" "_").py generate-crds > $p/$j-crds.yaml
     python3 samples/$j/$(echo $j | tr "-" "_").py generate-rbac > $p/$j-rbac.yaml
-    python3 samples/$j/$(echo $j | tr "-" "_").py generate-deployment --image docker.io/codemowers/$j:latest > $p/$j-deployment.yaml
+    python3 samples/$j/$(echo $j | tr "-" "_").py generate-deployment --image mirror.gcr.io/codemowers/$j:latest > $p/$j-deployment.yaml
     ns=$(cat $p/$j-rbac.yaml  | grep namespace | head -n1 | cut -d ":" -f 2 | xargs)
     cat << EOF >> argocd-applications.yaml
 ---
@@ -78,5 +78,5 @@ cat skaffold-* > skaffold.yaml
 
 cat samples/*/test/* > test.yaml
 # TODO: Cleaner way to disable CRD generation
-rm -fv samples/wildduck-operator/templates/wildduck-operator-deployment.yaml
-rm -fv samples/wildduck-operator/templates/wildduck-operator-crds.yaml
+rm -f samples/wildduck-operator/templates/wildduck-operator-deployment.yaml
+rm -f samples/wildduck-operator/templates/wildduck-operator-crds.yaml
