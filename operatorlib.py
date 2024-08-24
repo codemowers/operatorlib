@@ -178,7 +178,7 @@ class Operator():
                                     "cpu": "1m",
                                     "memory": "128Mi",
                                 }, "requests": {
-                                    "cpu": "1000m",
+                                    "cpu": 1,
                                     "memory": "64Mi",
                                 }
                             }
