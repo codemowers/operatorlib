@@ -145,7 +145,6 @@ class Operator():
                 "name": sts_name,
             },
             "spec": {
-                "enableServiceLinks": False,
                 "revisionHistoryLimit": 0,
                 "replicas": 1,
                 "serviceName": sts_name,
@@ -178,7 +177,7 @@ class Operator():
                                     "cpu": "1m",
                                     "memory": "128Mi",
                                 }, "requests": {
-                                    "cpu": 1,
+                                    "cpu": "1",
                                     "memory": "64Mi",
                                 }
                             }
