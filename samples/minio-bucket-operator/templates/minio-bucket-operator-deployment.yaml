@@ -5,7 +5,9 @@ metadata:
   name: minio-bucket-operator
   namespace: minio-clusters
 spec:
+  enableServiceLinks: false
   replicas: 1
+  revisionHistoryLimit: 0
   selector:
     matchLabels:
       app: minio-bucket-operator
@@ -21,6 +23,13 @@ spec:
           ports:
             - containerPort: 8000
               name: metrics
+          resources:
+            limits:
+              cpu: 1m
+              memory: 128Mi
+            requests:
+              cpu: 1000m
+              memory: 64Mi
       enableServiceLinks: false
       imagePullSecrets:
         - name: regcred

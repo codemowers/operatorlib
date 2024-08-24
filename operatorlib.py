@@ -145,6 +145,8 @@ class Operator():
                 "name": sts_name,
             },
             "spec": {
+                "enableServiceLinks": False,
+                "revisionHistoryLimit": 0,
                 "replicas": 1,
                 "serviceName": sts_name,
                 "selector": {
@@ -170,7 +172,16 @@ class Operator():
                             "ports": [{
                                 "containerPort": 8000,
                                 "name": "metrics",
-                            }]
+                            }],
+                            "resources": {
+                                "limits": {
+                                    "cpu": "1m",
+                                    "memory": "128Mi",
+                                }, "requests": {
+                                    "cpu": "1000m",
+                                    "memory": "64Mi",
+                                }
+                            }
                         }]
                     }
                 }
