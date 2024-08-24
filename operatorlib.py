@@ -174,10 +174,10 @@ class Operator():
                             }],
                             "resources": {
                                 "limits": {
-                                    "cpu": "1m",
+                                    "cpu": "500m",
                                     "memory": "128Mi",
                                 }, "requests": {
-                                    "cpu": "1",
+                                    "cpu": "1m",
                                     "memory": "64Mi",
                                 }
                             }
