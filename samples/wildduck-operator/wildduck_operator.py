@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from operatorlib import ClaimMixin, Operator, ReconcileError
 import aiohttp
+import asyncio
 import os
 
 
@@ -23,6 +24,21 @@ class WildduckOperator(ClaimMixin, Operator):
 
     @classmethod
     async def reconcile_claim(cls, api_client, co, body):
+        # Wildduck API being temporarily unreachable (pod restart, node
+        # reboot) is expected; retry instead of letting the connection
+        # error propagate and kill the whole operator process
+        backoff = 5
+        while True:
+            try:
+                return await cls.reconcile_wildduck_user(api_client, co, body)
+            except (aiohttp.ClientConnectionError, asyncio.TimeoutError) as e:
+                print("Wildduck API unreachable, retrying in %d seconds: %s" % (
+                    backoff, e))
+                await asyncio.sleep(backoff)
+                backoff = min(backoff * 2, 300)
+
+    @classmethod
+    async def reconcile_wildduck_user(cls, api_client, co, body):
         username = body["metadata"]["name"]
 
         # TODO: Cleaner env var handling
