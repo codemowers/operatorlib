@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-from operatorlib import ClaimMixin, Operator, ReconcileError
+from operatorlib import ClaimMixin, MonitoringMixin, Operator, ReconcileError
 import aiohttp
 import asyncio
 import os
 
 
-class WildduckOperator(ClaimMixin, Operator):
+class WildduckOperator(ClaimMixin, MonitoringMixin, Operator):
     OPERATOR = "wildduck-operator"
     GROUP = "codemowers.cloud"
     VERSION = "v1beta1"
