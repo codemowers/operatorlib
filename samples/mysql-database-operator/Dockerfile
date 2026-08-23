@@ -2,7 +2,8 @@ FROM python:alpine AS build
 RUN pip3 wheel --wheel-dir=/wheels \
     kubernetes-asyncio \
     aiomysql \
-    passlib
+    passlib \
+    'bcrypt<5'
 
 FROM python:alpine
 COPY --from=build /wheels /wheels
