@@ -2,6 +2,7 @@ FROM python:alpine AS build
 RUN pip3 wheel --wheel-dir=/wheels \
    kubernetes-asyncio \
    passlib \
+   'bcrypt<5' \
    pyjwt \
    httpx-auth \
    httpx
